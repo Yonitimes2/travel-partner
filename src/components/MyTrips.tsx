@@ -205,16 +205,20 @@ function RequestRow({
             {!locked && (
               <span className="block truncate text-xs text-muted">
                 {from.city}
-                {request.party > 1 && ` · ${t.my.party(request.party)}`}
               </span>
             )}
           </span>
         </span>
         <StatusPill status={request.status} />
       </div>
+      <p className="mt-2.5 text-sm font-semibold text-navy">
+        {t.partyText(request.party)}
+        {request.party.type === "group" && request.party.note && <span className="font-normal text-muted"> · {request.party.note}</span>}
+      </p>
       {!locked && (
-        <div className="mt-2.5">
-          <ProfileFacts user={from} />
+        <div className="mt-2">
+          {/* who's coming is the request's own answer, above */}
+          <ProfileFacts user={from} withParty={false} />
         </div>
       )}
       {request.note && <p className="mt-2.5 border-s-[3px] border-sky/50 ps-2.5 text-sm text-ink">{request.note}</p>}
@@ -286,8 +290,12 @@ function Sent() {
             <div className="px-4 pb-3">
               <FlightLine trip={trip} />
             </div>
-            {(r.note || r.status !== "declined") && <div className="perforation" />}
+            <div className="perforation" />
             <div className="space-y-3 px-4 py-3">
+              <p className="text-sm font-semibold text-navy">
+                {t.partyText(r.party)}
+                {r.party.type === "group" && r.party.note && <span className="font-normal text-muted"> · {r.party.note}</span>}
+              </p>
               {r.note && <p className="border-s-[3px] border-line ps-2.5 text-sm text-muted">{r.note}</p>}
               {r.status === "accepted" && (
                 <Link href={href(`/chat/${r.id}`)} className={`${primaryButton} w-full py-3 text-sm`}>

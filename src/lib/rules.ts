@@ -1,5 +1,5 @@
 import { isOpen } from "./dates";
-import type { Block, JoinRequest, Trip, User } from "./types";
+import type { Block, JoinRequest, Party, Trip, User } from "./types";
 
 /** the price of a closed trip (accepting partners); free while the beta lasts */
 export const TRIP_FEE = "₪79";
@@ -21,12 +21,24 @@ export function canSee(trip: Trip, owner: User, me: User, blocks: Block[]) {
   return owner.gender === me.gender || trip.wanted === "families";
 }
 
+/** how many people a party is (with others but no number given counts as two) */
+export const partySize = (p: Party) =>
+  p.type === "solo" ? 1 : p.type === "group" ? 1 + Math.max(1, p.others) : p.parents + p.kids;
+
+/** phone numbers compared by their digits only */
+export const samePhone = (a: string, b: string) => a.replace(/\D/g, "") === b.replace(/\D/g, "");
+
+export const formatPhone = (phone: string) => {
+  const d = phone.replace(/\D/g, "");
+  return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3)}` : phone;
+};
+
 /** points come from activity only: trips that people joined, and how many joined */
 export function statsOf(user: User, trips: Trip[], requests: JoinRequest[]) {
   const mine = new Set(trips.filter((t) => t.ownerId === user.id).map((t) => t.id));
   const accepted = requests.filter((r) => r.status === "accepted" && mine.has(r.tripId));
   const tripCount = user.history.trips + new Set(accepted.map((r) => r.tripId)).size;
-  const joined = user.history.joined + accepted.reduce((n, r) => n + r.party, 0);
+  const joined = user.history.joined + accepted.reduce((n, r) => n + partySize(r.party), 0);
   return { trips: tripCount, joined, points: tripCount * 10 + joined * 5 };
 }
 

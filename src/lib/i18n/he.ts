@@ -6,7 +6,7 @@ import type {
   Pace,
   ReportReason,
   RequestStatus,
-  TravelsAs,
+  Party,
   TripKind,
   TripStyle,
   Wanted,
@@ -131,10 +131,28 @@ export const he = {
     food: "אוכל כשר",
   } satisfies Record<TripStyle, string>,
 
-  travelsAs: {
+  /** who someone travels with */
+  partyType: {
     solo: "לבד",
-    family: "עם המשפחה",
-  } satisfies Record<TravelsAs, string>,
+    group: "עם עוד אנשים",
+    family: "משפחה",
+  } satisfies Record<Party["type"], string>,
+  /** "לבד", "עם עוד 2 אנשים", "משפחה: 2 הורים ו־3 ילדים" */
+  partyText: (p: Party) => {
+    if (p.type === "solo") return "לבד";
+    if (p.type === "group") return p.others <= 0 ? "עם עוד אנשים" : p.others === 1 ? "עם עוד אדם אחד" : `עם עוד ${p.others} אנשים`;
+    const parents = p.parents === 1 ? "הורה" : "2 הורים";
+    return p.kids === 0 ? `משפחה: ${parents}` : p.kids === 1 ? `משפחה: ${parents} וילד אחד` : `משפחה: ${parents} ו־${p.kids} ילדים`;
+  },
+  partyForm: {
+    others: "כמה אנשים נוספים (לא חובה)",
+    note: "הערה (לא חובה)",
+    notePlaceholder: "למשל: שני חברים מהקהילה",
+    parents: "הורים",
+    oneParent: "הורה אחד",
+    twoParents: "2 הורים",
+    kids: "ילדים",
+  },
 
   ageGroup: {
     "18-25": "18–25",
@@ -216,8 +234,8 @@ export const he = {
     title: "בקשה להצטרף",
     noteLabel: "הודעה קצרה עם הבקשה",
     notePlaceholder: "למשל: שני אחים מירושלים, מטיילים בקצב רגוע",
-    familiesHint: "טיול משפחות — כדאי לכתוב מי מהמשפחה מצטרף",
-    party: "כמה מצטרפים (כולל ילדים)",
+    familiesHint: "טיול משפחות — כדאי לבחור 'משפחה' ולציין מי מצטרף",
+    party: "מי מצטרף?",
     plannedNote: "הטיול עדיין בתכנון. הבקשה תחכה עד שהטיול ייסגר ויאושר.",
     send: "שליחת הבקשה",
     cancel: "ביטול",
@@ -315,7 +333,6 @@ export const he = {
     delete: "מחיקה",
     confirmDelete: "למחוק את הטיול? הבקשות והשיחות שלו יימחקו.",
     deleted: "הטיול נמחק",
-    party: (n: number) => (n === 1 ? "מצטרף אחד" : `${n} מצטרפים`),
   },
 
   chat: {
@@ -355,7 +372,12 @@ export const he = {
     avatar: "דמות",
     gender: "מדור",
     genderLocked: "נקבע בהרשמה ואי אפשר לשנות",
-    travelsAs: "איך יוצאים לטיולים",
+    party: "עם מי מטיילים",
+    fullName: "שם מלא",
+    phone: "טלפון",
+    privateTitle: "פרטים אישיים",
+    privateNote: "לא מוצגים לאף אחד — רק להנהלת המדור",
+    phoneVerified: "אומת ב־SMS",
     ageGroup: "שכבת גיל",
     observance: "רמת הקפדה",
     pace: "קצב וכושר",
@@ -388,10 +410,13 @@ export const he = {
     genderWarn: "אי אפשר לשנות אחר כך",
     styleTitle: "איך מטיילים?",
     referralTitle: "מי ממליץ עליך?",
-    referralHint: "מישהו מהקהילה, מאותו מדור. אחרי ההמלצה ההרשמה עוברת לאישור הנהלת המדור.",
-    referralLabel: "הכינוי של מי שממליץ",
-    referralNotFound: "לא מצאנו את הכינוי הזה במדור",
-    referralExamples: (names: string) => `בדמו אפשר לכתוב: ${names}`,
+    referralHint:
+      "מישהו מהקהילה, מאותו מדור. צריך לכתוב את השם המלא ואת מספר הטלפון של מי שממליץ, כדי שהנהלת המדור תוכל לבדוק את ההמלצה.",
+    referralName: "שם מלא של מי שממליץ",
+    referralPhone: "הטלפון של מי שממליץ",
+    referralNotFound: "המספר הזה לא רשום אצלנו במדור",
+    referralExamples: (names: string) => `בדמו אפשר: ${names}`,
+    fullNameHint: "לא מוצג לאף אחד — רק להנהלת המדור",
     submit: "שליחה לאישור",
     pendingTitle: "ההרשמה נשלחה!",
     pendingText: (name: string) =>
@@ -403,6 +428,7 @@ export const he = {
       phone: "צריך מספר טלפון תקין",
       code: "צריך 4 ספרות",
       nickname: "צריך כינוי",
+      fullName: "צריך שם מלא — שם פרטי ושם משפחה",
       gender: "צריך לבחור מדור",
     },
   },
@@ -423,6 +449,12 @@ export const he = {
     dismiss: "סגירת הדיווח",
     suspended: "מושעה",
     approved: "המשתמש אושר",
+    privateDetails: "פרטים להנהלה",
+    referral: "ההמלצה",
+    typedName: (name: string) => `נכתב: ${name}`,
+    nameMatches: "תואם לשם הרשום",
+    nameDiffers: (registered: string) => `לא תואם לשם הרשום (${registered})`,
+    call: "התקשרות",
   },
 
   safety: {

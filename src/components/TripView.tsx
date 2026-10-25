@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Clock, Hourglass, Lock, MapPin, MessageCircle, Minus, Pencil, Plus, Users, X } from "lucide-react";
+import { Check, Clock, Hourglass, Lock, MapPin, MessageCircle, Pencil, Users, X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { UserActions } from "./Moderation";
+import { PartyPicker } from "./PartyPicker";
 import { Photo } from "./Photo";
 import { FlightLine, KindBadge, StyleChips } from "./TripBits";
 import { BackButton, Card, PointsPill, Sheet, inputClass, primaryButton } from "./ui";
@@ -13,14 +14,15 @@ import { useT, useToast } from "./Providers";
 import { daysBetween, deadlineOf, flexOf, formatDay, isOpen } from "@/lib/dates";
 import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
-import type { Trip, User } from "@/lib/types";
+import type { Party, Trip, User } from "@/lib/types";
 
 export const NOTE_MAX = 200;
 
 /** age group, observance, pace and how they travel — what helps decide on a partner */
-export function ProfileFacts({ user }: { user: User }) {
+export function ProfileFacts({ user, withParty = true }: { user: User; withParty?: boolean }) {
   const { t } = useT();
-  const facts = [t.ageLabel(t.ageGroup[user.ageGroup]), t.observance[user.observance], t.pace[user.pace], t.travelsAs[user.travelsAs]];
+  const facts = [t.ageLabel(t.ageGroup[user.ageGroup]), t.observance[user.observance], t.pace[user.pace]];
+  if (withParty) facts.push(t.partyText(user.party));
   return (
     <div className="flex flex-wrap gap-1.5">
       {facts.map((f) => (
@@ -248,8 +250,10 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
   const { t } = useT();
   const toast = useToast();
   const askToJoin = useApp((s) => s.askToJoin);
+  const me = useApp((s) => findUser(s.users, s.meId))!;
   const [note, setNote] = useState("");
-  const [party, setParty] = useState(trip.wanted === "families" ? 4 : 1);
+  // who's coming starts from how I usually travel (my profile)
+  const [party, setParty] = useState<Party>(me.party);
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,23 +274,13 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
         </p>
 
         {trip.kind === "planned" && <p className="mt-3 rounded-2xl bg-sky-soft px-3.5 py-2.5 text-sm text-navy">{t.join.plannedNote}</p>}
-        {trip.wanted === "families" && (
-          <>
-            <p className="mt-3 rounded-2xl bg-gold-soft px-3.5 py-2.5 text-sm text-gold">{t.join.familiesHint}</p>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm font-semibold text-ink">{t.join.party}</span>
-              <span className="flex items-center gap-3">
-                <button type="button" aria-label="-" onClick={() => setParty((n) => Math.max(1, n - 1))} className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-line">
-                  <Minus size={16} aria-hidden />
-                </button>
-                <span className="digits w-6 text-center text-lg font-bold">{party}</span>
-                <button type="button" aria-label="+" onClick={() => setParty((n) => Math.min(15, n + 1))} className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-line">
-                  <Plus size={16} aria-hidden />
-                </button>
-              </span>
-            </div>
-          </>
+        {trip.wanted === "families" && party.type !== "family" && (
+          <p className="mt-3 rounded-2xl bg-gold-soft px-3.5 py-2.5 text-sm text-gold">{t.join.familiesHint}</p>
         )}
+
+        <div className="mt-4">
+          <PartyPicker label={t.join.party} value={party} onChange={setParty} />
+        </div>
 
         <label className="mb-1.5 mt-4 block text-sm font-semibold text-ink" htmlFor="join-note">
           {t.join.noteLabel}
@@ -297,7 +291,6 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
           onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
           maxLength={NOTE_MAX}
           rows={3}
-          autoFocus
           placeholder={t.join.notePlaceholder}
           className={`${inputClass} resize-none`}
         />

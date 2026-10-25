@@ -3,12 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Compass, Hourglass, ShieldCheck } from "lucide-react";
+import { PartyPicker } from "./PartyPicker";
 import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profile";
 import { Photo } from "./Photo";
 import { Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
+import { formatPhone, samePhone } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
-import type { AgeGroup, AvatarId, Gender, Observance, Pace, TravelsAs } from "@/lib/types";
+import type { AgeGroup, AvatarId, Gender, Observance, Pace, Party } from "@/lib/types";
+
+const isFullName = (name: string) => name.trim().split(/\s+/).length >= 2;
+const isPhone = (phone: string) => /^0?5\d{8}$/.test(phone.replace(/\D/g, ""));
 
 const STEPS = 5;
 
@@ -24,30 +29,50 @@ export function Welcome() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [nickname, setNickname] = useState("");
+  const [fullName, setFullName] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [avatar, setAvatar] = useState<AvatarId>("compass");
   const [ageGroup, setAgeGroup] = useState<AgeGroup>("26-35");
   const [city, setCity] = useState("");
   const [observance, setObservance] = useState<Observance>("kosher");
   const [pace, setPace] = useState<Pace>("medium");
-  const [travelsAs, setTravelsAs] = useState<TravelsAs>("solo");
-  const [referrer, setReferrer] = useState("");
+  const [party, setParty] = useState<Party>({ type: "solo" });
+  const [referrerName, setReferrerName] = useState("");
+  const [referrerPhone, setReferrerPhone] = useState("");
   const [error, setError] = useState("");
 
   const sectionMembers = users.filter((u) => u.status === "active" && u.gender === gender);
-  const recommender = me?.referredBy ? findUser(users, me.referredBy) : undefined;
+
 
   const next = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (step === 1 && !/^0?5\d{8}$/.test(phone.replace(/\D/g, ""))) return setError(t.welcome.errors.phone);
+    if (step === 1 && !isPhone(phone)) return setError(t.welcome.errors.phone);
     if (step === 2 && !/^\d{4}$/.test(code)) return setError(t.welcome.errors.code);
     if (step === 3 && !nickname.trim()) return setError(t.welcome.errors.nickname);
+    if (step === 3 && !isFullName(fullName)) return setError(t.welcome.errors.fullName);
     if (step === 3 && !gender) return setError(t.welcome.errors.gender);
     if (step === 5) {
-      const by = sectionMembers.find((u) => u.nickname === referrer.trim());
+      // the recommender is found by phone (members sign up with theirs); the name is kept for the admins to check
+      if (!isFullName(referrerName)) return setError(t.welcome.errors.fullName);
+      if (!isPhone(referrerPhone)) return setError(t.welcome.errors.phone);
+      const by = sectionMembers.find((u) => samePhone(u.phone, referrerPhone));
       if (!by) return setError(t.welcome.referralNotFound);
-      const id = signUp({ nickname: nickname.trim(), avatar, gender: gender as Gender, travelsAs, ageGroup, observance, pace, city: city.trim(), about: "", referredBy: by.id });
+      const id = signUp({
+        nickname: nickname.trim(),
+        fullName: fullName.trim(),
+        phone: phone.replace(/\D/g, ""),
+        avatar,
+        gender: gender as Gender,
+        party,
+        ageGroup,
+        observance,
+        pace,
+        city: city.trim(),
+        about: "",
+        referredBy: by.id,
+        referral: { name: referrerName.trim(), phone: formatPhone(referrerPhone) },
+      });
       viewAs(id);
     }
     setStep((s) => s + 1);
@@ -88,7 +113,7 @@ export function Welcome() {
           <Hourglass size={36} aria-hidden />
         </span>
         <h1 className="mt-5 text-3xl font-extrabold text-ink">{t.welcome.pendingTitle}</h1>
-        <p className="mt-3 leading-relaxed text-muted">{t.welcome.pendingText(recommender?.nickname ?? "")}</p>
+        <p className="mt-3 leading-relaxed text-muted">{t.welcome.pendingText(me.referral?.name ?? "")}</p>
         <button
           type="button"
           onClick={() => {
@@ -154,6 +179,10 @@ export function Welcome() {
             <Field label={t.profile.nickname} htmlFor="nick">
               <input id="nick" value={nickname} maxLength={24} onChange={(e) => setNickname(e.target.value)} className={inputClass} />
             </Field>
+            <Field label={t.profile.fullName} htmlFor="fullName">
+              <input id="fullName" value={fullName} maxLength={60} autoComplete="name" onChange={(e) => setFullName(e.target.value)} className={inputClass} />
+              <p className="mt-1 text-xs text-muted">{t.welcome.fullNameHint}</p>
+            </Field>
             <fieldset>
               <legend className="mb-2 text-sm font-semibold text-ink">{t.profile.gender}</legend>
               <div className="grid grid-cols-2 gap-2">
@@ -186,18 +215,30 @@ export function Welcome() {
           <>
             <ChoiceRow label={t.profile.observance} options={OBSERVANCE} value={observance} onChange={setObservance} text={(o) => t.observance[o]} />
             <ChoiceRow label={t.profile.pace} options={PACES} value={pace} onChange={setPace} text={(p) => t.pace[p]} />
-            <ChoiceRow label={t.profile.travelsAs} options={["solo", "family"] as const} value={travelsAs} onChange={setTravelsAs} text={(v) => t.travelsAs[v]} />
+            <PartyPicker label={t.profile.party} value={party} onChange={setParty} />
           </>
         )}
 
         {step === 5 && (
           <>
             <p className="text-sm leading-relaxed text-muted">{t.welcome.referralHint}</p>
-            <Field label={t.welcome.referralLabel} htmlFor="referrer">
-              <input id="referrer" value={referrer} onChange={(e) => setReferrer(e.target.value)} className={inputClass} />
+            <Field label={t.welcome.referralName} htmlFor="referrerName">
+              <input id="referrerName" value={referrerName} maxLength={60} onChange={(e) => setReferrerName(e.target.value)} className={inputClass} />
             </Field>
-            <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              {t.welcome.referralExamples(sectionMembers.slice(0, 4).map((u) => u.nickname).join(", "))}
+            <Field label={t.welcome.referralPhone} htmlFor="referrerPhone">
+              <input
+                id="referrerPhone"
+                type="tel"
+                inputMode="tel"
+                dir="ltr"
+                value={referrerPhone}
+                onChange={(e) => setReferrerPhone(e.target.value)}
+                placeholder="050-0000000"
+                className={`${inputClass} tracking-wider`}
+              />
+            </Field>
+            <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+              {t.welcome.referralExamples(sectionMembers.slice(0, 3).map((u) => `${u.fullName} ${formatPhone(u.phone)}`).join(" · "))}
             </p>
           </>
         )}

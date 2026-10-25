@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ChevronLeft, Compass, FlaskConical, Lock, RotateCcw, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
+import { BadgeCheck, ChevronLeft, Compass, FlaskConical, Lock, RotateCcw, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
 import { AVATAR_IDS, Avatar } from "./Avatar";
+import { PartyPicker } from "./PartyPicker";
 import { Body, Card, Chip, Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
-import { statsOf, tierOf } from "@/lib/rules";
+import { formatPhone, statsOf, tierOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
-import type { AgeGroup, AvatarId, Observance, Pace, TravelsAs, User } from "@/lib/types";
+import type { AgeGroup, AvatarId, Observance, Pace, Party, User } from "@/lib/types";
 
 export const AGE_GROUPS: AgeGroup[] = ["18-25", "26-35", "36-50", "50+"];
 export const OBSERVANCE: Observance[] = ["strict", "kosher", "traditional"];
@@ -77,7 +78,8 @@ function ProfileForm() {
 
   const [nickname, setNickname] = useState(me.nickname);
   const [avatar, setAvatar] = useState<AvatarId>(me.avatar);
-  const [travelsAs, setTravelsAs] = useState<TravelsAs>(me.travelsAs);
+  const [party, setParty] = useState<Party>(me.party);
+  const [fullName, setFullName] = useState(me.fullName);
   const [ageGroup, setAgeGroup] = useState<AgeGroup>(me.ageGroup);
   const [observance, setObservance] = useState<Observance>(me.observance);
   const [pace, setPace] = useState<Pace>(me.pace);
@@ -86,8 +88,8 @@ function ProfileForm() {
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nickname.trim()) return;
-    updateProfile({ nickname: nickname.trim(), avatar, travelsAs, ageGroup, observance, pace, city: city.trim(), about: about.trim() });
+    if (!nickname.trim() || fullName.trim().split(/\s+/).length < 2) return;
+    updateProfile({ nickname: nickname.trim(), avatar, party, fullName: fullName.trim(), ageGroup, observance, pace, city: city.trim(), about: about.trim() });
     toast(t.profile.saved);
   };
 
@@ -128,7 +130,7 @@ function ProfileForm() {
             <ChoiceRow label={t.profile.ageGroup} options={AGE_GROUPS} value={ageGroup} onChange={setAgeGroup} text={(a) => t.ageGroup[a]} />
             <ChoiceRow label={t.profile.observance} options={OBSERVANCE} value={observance} onChange={setObservance} text={(o) => t.observance[o]} />
             <ChoiceRow label={t.profile.pace} options={PACES} value={pace} onChange={setPace} text={(p) => t.pace[p]} />
-            <ChoiceRow label={t.profile.travelsAs} options={["solo", "family"] as const} value={travelsAs} onChange={setTravelsAs} text={(v) => t.travelsAs[v]} />
+            <PartyPicker label={t.profile.party} value={party} onChange={setParty} />
 
             <Field label={t.profile.city} htmlFor="city">
               <input id="city" value={city} maxLength={40} onChange={(e) => setCity(e.target.value)} className={inputClass} />
@@ -136,6 +138,32 @@ function ProfileForm() {
             <Field label={t.profile.about} htmlFor="about">
               <textarea id="about" rows={3} maxLength={200} value={about} onChange={(e) => setAbout(e.target.value)} className={`${inputClass} resize-none`} />
             </Field>
+
+            {/* private: only the section's admins see these */}
+            <div className="rounded-2xl bg-mist p-3.5">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
+                <Lock size={14} aria-hidden />
+                {t.profile.privateTitle}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">{t.profile.privateNote}</p>
+              <div className="mt-3 space-y-3">
+                <Field label={t.profile.fullName} htmlFor="fullName" error={fullName.trim().split(/\s+/).length < 2 ? t.welcome.errors.fullName : undefined}>
+                  <input id="fullName" value={fullName} maxLength={60} autoComplete="name" onChange={(e) => setFullName(e.target.value)} className={inputClass} />
+                </Field>
+                <div>
+                  <span className="mb-1.5 block text-sm font-semibold text-ink">{t.profile.phone}</span>
+                  <div className="flex items-center justify-between rounded-2xl bg-white px-3.5 py-3 ring-1 ring-line">
+                    <span dir="ltr" className="font-semibold text-ink">
+                      {formatPhone(me.phone)}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-mint">
+                      <BadgeCheck size={14} aria-hidden />
+                      {t.profile.phoneVerified}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <button type="submit" className={`${primaryButton} w-full`}>
               {t.profile.save}

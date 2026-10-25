@@ -15,7 +15,11 @@ export type Area = "north" | "center" | "jerusalem" | "south" | "europe" | "usa"
 
 export type TripStyle = "hiking" | "nature" | "cities" | "relaxed" | "adventure" | "shabbat" | "food";
 
-export type TravelsAs = "solo" | "family";
+/** who someone travels with: alone, with other people (how many is optional, plus a note), or a family */
+export type Party =
+  | { type: "solo" }
+  | { type: "group"; others: number; note: string }
+  | { type: "family"; parents: 1 | 2; kids: number };
 
 export type PhotoId =
   | "north-kinneret"
@@ -80,15 +84,20 @@ export interface User {
   nickname: string;
   avatar: AvatarId;
   gender: Gender;
-  travelsAs: TravelsAs;
+  /** private: only the section's admins see the full name and phone */
+  fullName: string;
+  phone: string;
+  party: Party;
   ageGroup: AgeGroup;
   observance: Observance;
   pace: Pace;
   city: string;
   about: string;
   status: UserStatus;
-  /** the existing member who recommended them */
+  /** the existing member who recommended them (found by the phone they gave) */
   referredBy?: string;
+  /** the recommender's full name and phone as typed at sign-up, for the admins to check */
+  referral?: { name: string; phone: string };
   /** trips and partners from before the data in this prototype, so the points have history */
   history: { trips: number; joined: number };
   notify: { push: boolean; email: boolean };
@@ -125,8 +134,8 @@ export interface JoinRequest {
   fromUserId: string;
   /** the short note sent with the request; the only text allowed before the owner accepts */
   note: string;
-  /** how many people are coming (families) */
-  party: number;
+  /** who is coming */
+  party: Party;
   status: RequestStatus;
   createdAt: string;
 }

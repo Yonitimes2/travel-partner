@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { todayISO } from "./dates";
 import { DEMO_MAN, makeSeed, type SeedData } from "./seed";
-import type { Area, JoinRequest, ReportReason, RequestStatus, Trip, TripKind, TripStatus, User, Wanted } from "./types";
+import type { Area, JoinRequest, Party, ReportReason, RequestStatus, Trip, TripKind, TripStatus, User, Wanted } from "./types";
 
 /**
  * The prototype's whole "backend": sample data in the browser (localStorage).
@@ -13,11 +13,23 @@ import type { Area, JoinRequest, ReportReason, RequestStatus, Trip, TripKind, Tr
 
 export type TripInput = Omit<Trip, "id" | "ownerId" | "createdAt" | "status">;
 export type ProfilePatch = Partial<
-  Pick<User, "nickname" | "avatar" | "travelsAs" | "ageGroup" | "observance" | "pace" | "city" | "about" | "notify">
+  Pick<User, "nickname" | "avatar" | "fullName" | "party" | "ageGroup" | "observance" | "pace" | "city" | "about" | "notify">
 >;
 export type SignUp = Pick<
   User,
-  "nickname" | "avatar" | "gender" | "travelsAs" | "ageGroup" | "observance" | "pace" | "city" | "about" | "referredBy"
+  | "nickname"
+  | "avatar"
+  | "gender"
+  | "fullName"
+  | "phone"
+  | "party"
+  | "ageGroup"
+  | "observance"
+  | "pace"
+  | "city"
+  | "about"
+  | "referredBy"
+  | "referral"
 >;
 
 /** the trips list's tab and filters; kept while moving between pages, not saved */
@@ -47,7 +59,7 @@ interface AppState extends SeedData {
   setTripStatus: (id: string, status: TripStatus) => void;
   deleteTrip: (id: string) => void;
 
-  askToJoin: (tripId: string, note: string, party: number) => void;
+  askToJoin: (tripId: string, note: string, party: Party) => void;
   respond: (requestId: string, status: Exclude<RequestStatus, "pending">) => void;
   sendMessage: (requestId: string, text: string) => void;
 
@@ -179,8 +191,8 @@ export const useApp = create<AppState>()(
       reset: () => set({ ...makeSeed(todayISO(), new Date()), meId: DEMO_MAN }),
     }),
     {
-      // v4: date options on planned trips
-      name: "travel-partner-demo-v4",
+      // v5: who travels with whom, full names and phones for recommendations
+      name: "travel-partner-demo-v5",
       skipHydration: true,
       partialize: ({ users, trips, requests, messages, reports, blocks, meId }) => ({
         users,

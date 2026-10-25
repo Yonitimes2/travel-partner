@@ -105,9 +105,25 @@ export const en: Dict = {
     food: "Kosher food",
   },
 
-  travelsAs: {
+  partyType: {
     solo: "Solo",
-    family: "With family",
+    group: "With others",
+    family: "Family",
+  },
+  partyText: (p) => {
+    if (p.type === "solo") return "Solo";
+    if (p.type === "group") return p.others <= 0 ? "With others" : p.others === 1 ? "With 1 other" : `With ${p.others} others`;
+    const parents = p.parents === 1 ? "1 parent" : "2 parents";
+    return p.kids === 0 ? `Family: ${parents}` : `Family: ${parents} and ${p.kids === 1 ? "1 child" : `${p.kids} children`}`;
+  },
+  partyForm: {
+    others: "How many others (optional)",
+    note: "Note (optional)",
+    notePlaceholder: "e.g. Two friends from the community",
+    parents: "Parents",
+    oneParent: "1 parent",
+    twoParents: "2 parents",
+    kids: "Children",
   },
 
   ageGroup: {
@@ -190,8 +206,8 @@ export const en: Dict = {
     title: "Ask to join",
     noteLabel: "A short note with your request",
     notePlaceholder: "e.g. Two brothers from Jerusalem, easy pace",
-    familiesHint: "A family trip — say who in your family is coming",
-    party: "How many are coming (including children)",
+    familiesHint: "A family trip — pick 'Family' and say who's coming",
+    party: "Who's coming?",
     plannedNote: "This trip is still planned. Your request waits until the trip is confirmed.",
     send: "Send request",
     cancel: "Cancel",
@@ -289,7 +305,6 @@ export const en: Dict = {
     delete: "Delete",
     confirmDelete: "Delete this trip? Its requests and chats will be deleted too.",
     deleted: "Trip deleted",
-    party: (n) => (n === 1 ? "1 person" : `${n} people`),
   },
 
   chat: {
@@ -329,7 +344,12 @@ export const en: Dict = {
     avatar: "Avatar",
     gender: "Section",
     genderLocked: "Set at sign-up and can't be changed",
-    travelsAs: "How you travel",
+    party: "Who you travel with",
+    fullName: "Full name",
+    phone: "Phone",
+    privateTitle: "Personal details",
+    privateNote: "Never shown to anyone — only the section's admins",
+    phoneVerified: "Verified by SMS",
     ageGroup: "Age group",
     observance: "Observance",
     pace: "Pace & fitness",
@@ -362,10 +382,13 @@ export const en: Dict = {
     genderWarn: "Can't be changed later",
     styleTitle: "How do you travel?",
     referralTitle: "Who recommends you?",
-    referralHint: "Someone in the community, from the same section. After that, the section's admins approve your sign-up.",
-    referralLabel: "Their nickname",
-    referralNotFound: "We couldn't find that nickname in the section",
-    referralExamples: (names) => `In the demo you can use: ${names}`,
+    referralHint:
+      "Someone in the community, from the same section. Write their full name and phone number, so the section's admins can check the recommendation.",
+    referralName: "Their full name",
+    referralPhone: "Their phone",
+    referralNotFound: "That number isn't registered in the section",
+    referralExamples: (names) => `In the demo: ${names}`,
+    fullNameHint: "Never shown to anyone — only the section's admins",
     submit: "Send for approval",
     pendingTitle: "Sign-up sent!",
     pendingText: (name) =>
@@ -377,6 +400,7 @@ export const en: Dict = {
       phone: "Enter a valid phone number",
       code: "Enter 4 digits",
       nickname: "Pick a nickname",
+      fullName: "Enter a full name — first and last",
       gender: "Pick a section",
     },
   },
@@ -397,6 +421,12 @@ export const en: Dict = {
     dismiss: "Close report",
     suspended: "Suspended",
     approved: "Member approved",
+    privateDetails: "For the admins",
+    referral: "Recommendation",
+    typedName: (name) => `Typed: ${name}`,
+    nameMatches: "Matches the name on file",
+    nameDiffers: (registered) => `Doesn't match the name on file (${registered})`,
+    call: "Call",
   },
 
   safety: {

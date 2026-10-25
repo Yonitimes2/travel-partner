@@ -1,5 +1,7 @@
 import { addDays } from "./dates";
-import type { Block, JoinRequest, Message, Report, Trip, User } from "./types";
+import type { Block, JoinRequest, Message, Party, Report, Trip, User } from "./types";
+
+const SOLO: Party = { type: "solo" };
 
 /** the two people you can "be" in the prototype: one per section */
 export const DEMO_MAN = "u-me-m";
@@ -22,24 +24,24 @@ export function makeSeed(today: string, now: Date): SeedData {
   const ago = (hours: number) => new Date(now.getTime() - hours * 3_600_000).toISOString();
 
   const people: UserSeed[] = [
-    { id: DEMO_MAN, nickname: "יוני", avatar: "compass", gender: "male", travelsAs: "solo", ageGroup: "36-50", observance: "kosher", pace: "medium", city: "ירושלים", about: "אוהב מסלולים ארוכים ושקט בבוקר", history: { trips: 3, joined: 5 } },
-    { id: DEMO_WOMAN, nickname: "מיכל", avatar: "camel", gender: "female", travelsAs: "solo", ageGroup: "26-35", observance: "kosher", pace: "medium", city: "גבעת שמואל", about: "מטיילת בכל הזדמנות, בעיקר במדבר", history: { trips: 2, joined: 4 } },
+    { id: DEMO_MAN, fullName: "יונתן כהן", phone: "0501000001", nickname: "יוני", avatar: "compass", gender: "male", party: SOLO, ageGroup: "36-50", observance: "kosher", pace: "medium", city: "ירושלים", about: "אוהב מסלולים ארוכים ושקט בבוקר", history: { trips: 3, joined: 5 } },
+    { id: DEMO_WOMAN, fullName: "מיכל לוי", phone: "0502000001", nickname: "מיכל", avatar: "camel", gender: "female", party: SOLO, ageGroup: "26-35", observance: "kosher", pace: "medium", city: "גבעת שמואל", about: "מטיילת בכל הזדמנות, בעיקר במדבר", history: { trips: 2, joined: 4 } },
 
-    { id: "u-avi", nickname: "אבי", avatar: "mountain", gender: "male", travelsAs: "solo", ageGroup: "50+", observance: "kosher", pace: "hard", city: "ירושלים", about: "מדריך טיולים לשעבר", history: { trips: 14, joined: 31 } },
-    { id: "u-moshe", nickname: "משה ט.", avatar: "jeep", gender: "male", travelsAs: "family", ageGroup: "36-50", observance: "strict", pace: "easy", city: "בית שמש", about: "אבא לחמישה, אוהבים שטח", history: { trips: 4, joined: 9 } },
-    { id: "u-daniel", nickname: "דניאל", avatar: "backpack", gender: "male", travelsAs: "solo", ageGroup: "18-25", observance: "kosher", pace: "hard", city: "פתח תקווה", about: "אחרי צבא, מתכנן את הטיול הגדול", history: { trips: 0, joined: 1 } },
-    { id: "u-shmuel", nickname: "שמואל", avatar: "tent", gender: "male", travelsAs: "solo", ageGroup: "26-35", observance: "strict", pace: "hard", city: "צפת", about: "ישן בשטח כשאפשר", history: { trips: 6, joined: 11 } },
-    { id: "u-yehuda", nickname: "יהודה", avatar: "camera", gender: "male", travelsAs: "solo", ageGroup: "36-50", observance: "traditional", pace: "easy", city: "מודיעין", about: "מצלם בתי כנסת עתיקים", history: { trips: 2, joined: 3 } },
+    { id: "u-avi", fullName: "אבי מזרחי", phone: "0501000003", nickname: "אבי", avatar: "mountain", gender: "male", party: SOLO, ageGroup: "50+", observance: "kosher", pace: "hard", city: "ירושלים", about: "מדריך טיולים לשעבר", history: { trips: 14, joined: 31 } },
+    { id: "u-moshe", fullName: "משה טננבאום", phone: "0501000004", nickname: "משה ט.", avatar: "jeep", gender: "male", party: { type: "family", parents: 2, kids: 5 }, ageGroup: "36-50", observance: "strict", pace: "easy", city: "בית שמש", about: "אבא לחמישה, אוהבים שטח", history: { trips: 4, joined: 9 } },
+    { id: "u-daniel", fullName: "דניאל פרץ", phone: "0501000005", nickname: "דניאל", avatar: "backpack", gender: "male", party: SOLO, ageGroup: "18-25", observance: "kosher", pace: "hard", city: "פתח תקווה", about: "אחרי צבא, מתכנן את הטיול הגדול", history: { trips: 0, joined: 1 } },
+    { id: "u-shmuel", fullName: "שמואל לוי", phone: "0501000006", nickname: "שמואל", avatar: "tent", gender: "male", party: SOLO, ageGroup: "26-35", observance: "strict", pace: "hard", city: "צפת", about: "ישן בשטח כשאפשר", history: { trips: 6, joined: 11 } },
+    { id: "u-yehuda", fullName: "יהודה אדלר", phone: "0501000007", nickname: "יהודה", avatar: "camera", gender: "male", party: SOLO, ageGroup: "36-50", observance: "traditional", pace: "easy", city: "מודיעין", about: "מצלם בתי כנסת עתיקים", history: { trips: 2, joined: 3 } },
 
-    { id: "u-ruti", nickname: "רותי", avatar: "wave", gender: "female", travelsAs: "solo", ageGroup: "50+", observance: "kosher", pace: "easy", city: "רעננה", about: "אוהבת אגמים ורכבות", history: { trips: 9, joined: 17 } },
-    { id: "u-noa", nickname: "נועה ב.", avatar: "sun", gender: "female", travelsAs: "family", ageGroup: "36-50", observance: "strict", pace: "easy", city: "אפרת", about: "אמא לארבעה", history: { trips: 3, joined: 8 } },
-    { id: "u-ayala", nickname: "אילה", avatar: "bike", gender: "female", travelsAs: "solo", ageGroup: "26-35", observance: "kosher", pace: "hard", city: "חיפה", about: "רוכבת כל שבוע", history: { trips: 5, joined: 7 } },
-    { id: "u-shira", nickname: "שירה", avatar: "plane", gender: "female", travelsAs: "solo", ageGroup: "26-35", observance: "traditional", pace: "medium", city: "ירושלים", about: "טסה פעמיים בשנה", history: { trips: 7, joined: 12 } },
-    { id: "u-hana", nickname: "חנה", avatar: "tree", gender: "female", travelsAs: "solo", ageGroup: "50+", observance: "strict", pace: "easy", city: "בני ברק", about: "מעיינות ומסלולים קלים", history: { trips: 1, joined: 2 } },
+    { id: "u-ruti", fullName: "רות שפירא", phone: "0502000003", nickname: "רותי", avatar: "wave", gender: "female", party: SOLO, ageGroup: "50+", observance: "kosher", pace: "easy", city: "רעננה", about: "אוהבת אגמים ורכבות", history: { trips: 9, joined: 17 } },
+    { id: "u-noa", fullName: "נועה ברקוביץ", phone: "0502000004", nickname: "נועה ב.", avatar: "sun", gender: "female", party: { type: "family", parents: 2, kids: 4 }, ageGroup: "36-50", observance: "strict", pace: "easy", city: "אפרת", about: "אמא לארבעה", history: { trips: 3, joined: 8 } },
+    { id: "u-ayala", fullName: "אילה גולן", phone: "0502000005", nickname: "אילה", avatar: "bike", gender: "female", party: SOLO, ageGroup: "26-35", observance: "kosher", pace: "hard", city: "חיפה", about: "רוכבת כל שבוע", history: { trips: 5, joined: 7 } },
+    { id: "u-shira", fullName: "שירה אזולאי", phone: "0502000006", nickname: "שירה", avatar: "plane", gender: "female", party: SOLO, ageGroup: "26-35", observance: "traditional", pace: "medium", city: "ירושלים", about: "טסה פעמיים בשנה", history: { trips: 7, joined: 12 } },
+    { id: "u-hana", fullName: "חנה רוזן", phone: "0502000007", nickname: "חנה", avatar: "tree", gender: "female", party: SOLO, ageGroup: "50+", observance: "strict", pace: "easy", city: "בני ברק", about: "מעיינות ומסלולים קלים", history: { trips: 1, joined: 2 } },
 
     // waiting for the section's admin (the admin screen in the prototype)
-    { id: "u-new-m", nickname: "אריאל", avatar: "bike", gender: "male", travelsAs: "solo", ageGroup: "18-25", observance: "kosher", pace: "hard", city: "אשדוד", about: "רוכב שטח, מחפש חבר'ה לטיולים", history: { trips: 0, joined: 0 }, status: "pending", referredBy: "u-shmuel", createdAt: ago(4) },
-    { id: "u-new-f", nickname: "תמר", avatar: "sun", gender: "female", travelsAs: "family", ageGroup: "36-50", observance: "strict", pace: "easy", city: "אלעד", about: "אמא לשלושה, אוהבים טבע", history: { trips: 0, joined: 0 }, status: "pending", referredBy: "u-noa", createdAt: ago(9) },
+    { id: "u-new-m", fullName: "אריאל בן דוד", phone: "0503000001", nickname: "אריאל", avatar: "bike", gender: "male", party: SOLO, ageGroup: "18-25", observance: "kosher", pace: "hard", city: "אשדוד", about: "רוכב שטח, מחפש חבר'ה לטיולים", history: { trips: 0, joined: 0 }, status: "pending", referredBy: "u-shmuel", referral: { name: "שמואל לוי", phone: "050-1000006" }, createdAt: ago(4) },
+    { id: "u-new-f", fullName: "תמר אוחיון", phone: "0503000002", nickname: "תמר", avatar: "sun", gender: "female", party: { type: "family", parents: 2, kids: 3 }, ageGroup: "36-50", observance: "strict", pace: "easy", city: "אלעד", about: "אמא לשלושה, אוהבים טבע", history: { trips: 0, joined: 0 }, status: "pending", referredBy: "u-noa", referral: { name: "נועה ברק", phone: "050-2000004" }, createdAt: ago(9) },
   ];
 
   const users: User[] = people.map((p) => ({
@@ -142,16 +144,16 @@ export function makeSeed(today: string, now: Date): SeedData {
     }),
   ];
 
-  const req = (r: Omit<JoinRequest, "party"> & { party?: number }): JoinRequest => ({ party: 1, ...r });
+  const req = (r: Omit<JoinRequest, "party"> & { party?: JoinRequest["party"] }): JoinRequest => ({ party: SOLO, ...r });
 
   const requests: JoinRequest[] = [
-    req({ id: "r-1", tripId: "t-amud", fromUserId: "u-daniel", note: "נשמע מעולה, הייתי בנחל עמוד לפני שנה ואשמח שוב", status: "pending", createdAt: ago(3) }),
+    req({ id: "r-1", tripId: "t-amud", fromUserId: "u-daniel", party: { type: "group", others: 1, note: "חבר מהגרעין מצטרף איתי" }, note: "נשמע מעולה, הייתי בנחל עמוד לפני שנה ואשמח שוב", status: "pending", createdAt: ago(3) }),
     req({ id: "r-7", tripId: "t-amud", fromUserId: "u-yehuda", note: "אשמח להצטרף, אני מביא מצלמה ותרמוס", status: "pending", createdAt: ago(7) }),
     req({ id: "r-2", tripId: "t-golan", fromUserId: "u-shmuel", note: "גר בצפת, אפשר להיפגש כבר בקצרין", status: "accepted", createdAt: ago(28) }),
     req({ id: "r-3", tripId: "t-dolomites", fromUserId: DEMO_MAN, note: "יש לי ניסיון בהרים, אשמח להצטרף לכל המסלול", status: "pending", createdAt: ago(10) }),
 
     req({ id: "r-4", tripId: "t-eilat", fromUserId: "u-ayala", note: "תמיד רציתי לראות את המכתש בלילה", status: "pending", createdAt: ago(2) }),
-    req({ id: "r-5", tripId: "t-eilat", fromUserId: "u-hana", note: "אשמח להצטרף, בלי הרבה הליכה", status: "accepted", createdAt: ago(30) }),
+    req({ id: "r-5", tripId: "t-eilat", fromUserId: "u-hana", party: { type: "group", others: 1, note: "אחותי מצטרפת" }, note: "אשמח להצטרף, בלי הרבה הליכה", status: "accepted", createdAt: ago(30) }),
     req({ id: "r-6", tripId: "t-nyc", fromUserId: DEMO_WOMAN, note: "גם אני מתכננת להיות שם באותו שבוע", status: "pending", createdAt: ago(6) }),
   ];
 

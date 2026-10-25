@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Flag, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Flag, Lock, Phone, X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { ProfileFacts } from "./TripView";
 import { Body, Card, Empty, PageHeader, SegTabs } from "./ui";
 import { useT, useToast } from "./Providers";
+import { formatPhone } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Gender, User } from "@/lib/types";
 
@@ -65,12 +66,8 @@ export function Admin() {
                       <ProfileFacts user={u} />
                     </div>
                     {u.about && <p className="mt-2 text-sm text-ink">{u.about}</p>}
-                    {by && (
-                      <p className="mt-3 flex items-center gap-2 rounded-2xl bg-mist px-3 py-2 text-sm font-semibold text-navy">
-                        <Avatar id={by.avatar} size={22} />
-                        {t.admin.recommendedBy(by.nickname)}
-                      </p>
-                    )}
+                    <PrivateDetails user={u} />
+                    {by && <Referral user={u} by={by} />}
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
@@ -154,6 +151,58 @@ export function Admin() {
           )}
         </div>
       </Body>
+    </div>
+  );
+}
+
+/** what only the admins see: the full name and phone given at sign-up */
+function PrivateDetails({ user }: { user: User }) {
+  const { t } = useT();
+  return (
+    <div className="mt-3 rounded-2xl bg-mist px-3.5 py-2.5 text-sm">
+      <p className="flex items-center gap-1.5 text-xs font-bold text-muted">
+        <Lock size={12} aria-hidden />
+        {t.admin.privateDetails}
+      </p>
+      <p className="mt-1 flex items-center justify-between gap-2">
+        <span className="font-semibold text-ink">{user.fullName}</span>
+        <a href={`tel:${user.phone}`} dir="ltr" className="font-semibold text-sky">
+          {formatPhone(user.phone)}
+        </a>
+      </p>
+    </div>
+  );
+}
+
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, " ") === b.trim().replace(/\s+/g, " ");
+
+/** the recommendation: who it is, the name that was typed against the name on file, and a call button */
+function Referral({ user, by }: { user: User; by: User }) {
+  const { t } = useT();
+  const typed = user.referral?.name ?? "";
+  const matches = sameName(typed, by.fullName);
+  return (
+    <div className="mt-2.5 rounded-2xl bg-sky-soft/60 px-3.5 py-3 text-sm">
+      <p className="text-xs font-bold text-muted">{t.admin.referral}</p>
+      <p className="mt-1.5 flex items-center gap-2 font-semibold text-navy">
+        <Avatar id={by.avatar} size={22} />
+        {t.admin.recommendedBy(by.nickname)}
+      </p>
+      <p className="mt-1.5 text-ink">{t.admin.typedName(typed)}</p>
+      <p className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${matches ? "text-mint" : "text-amber-700"}`}>
+        {matches ? <CheckCircle2 size={14} aria-hidden /> : <AlertTriangle size={14} aria-hidden />}
+        {matches ? t.admin.nameMatches : t.admin.nameDiffers(by.fullName)}
+      </p>
+      <a
+        href={`tel:${by.phone}`}
+        className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-navy ring-1 ring-line"
+      >
+        <Phone size={13} aria-hidden />
+        {t.admin.call}
+        <span dir="ltr" className="font-semibold text-muted">
+          {formatPhone(by.phone)}
+        </span>
+      </a>
     </div>
   );
 }
