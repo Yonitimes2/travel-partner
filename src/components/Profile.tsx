@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BadgeCheck, ChevronLeft, Compass, FlaskConical, Lock, RotateCcw, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
+import { ChevronLeft, Compass, LogOut, Lock, Mail, ShieldCheck, Star, Users } from "lucide-react";
 import { AVATAR_IDS, Avatar } from "./Avatar";
 import { LogoMark } from "./Logo";
 import { PartyPicker } from "./PartyPicker";
 import { Body, Card, Chip, Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
-import { formatPhone, statsOf, tierOf } from "@/lib/rules";
+import { formatPhone, phoneDigits, tierOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { AgeGroup, AvatarId, Observance, Pace, Party, User } from "@/lib/types";
 
@@ -26,8 +26,7 @@ export function Profile() {
 /** the membership card: points and tier, like a frequent-flyer card */
 function MemberCard({ me }: { me: User }) {
   const { t } = useT();
-  const { trips, requests } = useApp();
-  const stats = statsOf(me, trips, requests);
+  const stats = me.stats;
   const tier = tierOf(stats.points);
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-navy-2 to-[#1d3f91] p-5 text-white shadow-2xl shadow-navy/30">
@@ -74,13 +73,15 @@ function ProfileForm() {
   const { t, href } = useT();
   const toast = useToast();
   const router = useRouter();
-  const { users, meId, updateProfile, reset } = useApp();
+  const { users, meId, updateProfile, signOut } = useApp();
   const me = findUser(users, meId)!;
 
   const [nickname, setNickname] = useState(me.nickname);
   const [avatar, setAvatar] = useState<AvatarId>(me.avatar);
   const [party, setParty] = useState<Party>(me.party);
   const [fullName, setFullName] = useState(me.fullName);
+  const [phone, setPhone] = useState(formatPhone(me.phone));
+  const phoneOk = /^05\d{8}$/.test(phoneDigits(phone));
   const [ageGroup, setAgeGroup] = useState<AgeGroup>(me.ageGroup);
   const [observance, setObservance] = useState<Observance>(me.observance);
   const [pace, setPace] = useState<Pace>(me.pace);
@@ -89,8 +90,11 @@ function ProfileForm() {
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nickname.trim() || fullName.trim().split(/\s+/).length < 2) return;
-    updateProfile({ nickname: nickname.trim(), avatar, party, fullName: fullName.trim(), ageGroup, observance, pace, city: city.trim(), about: about.trim() });
+    if (!nickname.trim() || fullName.trim().split(/\s+/).length < 2 || !phoneOk) return;
+    updateProfile({
+      nickname: nickname.trim(), avatar, party, fullName: fullName.trim(), phone: phoneDigits(phone),
+      ageGroup, observance, pace, city: city.trim(), about: about.trim(),
+    });
     toast(t.profile.saved);
   };
 
@@ -151,15 +155,16 @@ function ProfileForm() {
                 <Field label={t.profile.fullName} htmlFor="fullName" error={fullName.trim().split(/\s+/).length < 2 ? t.welcome.errors.fullName : undefined}>
                   <input id="fullName" value={fullName} maxLength={60} autoComplete="name" onChange={(e) => setFullName(e.target.value)} className={inputClass} />
                 </Field>
+                <Field label={t.profile.phone} htmlFor="phone" error={phoneOk ? undefined : t.welcome.errors.phone}>
+                  <input id="phone" type="tel" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} className={`${inputClass} text-start`} />
+                  <p className="mt-1 text-xs text-muted">{t.profile.phoneUse}</p>
+                </Field>
                 <div>
-                  <span className="mb-1.5 block text-sm font-semibold text-ink">{t.profile.phone}</span>
-                  <div className="flex items-center justify-between rounded-2xl bg-white px-3.5 py-3 ring-1 ring-line">
-                    <span dir="ltr" className="font-semibold text-ink">
-                      {formatPhone(me.phone)}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs font-semibold text-mint">
-                      <BadgeCheck size={14} aria-hidden />
-                      {t.profile.phoneVerified}
+                  <span className="mb-1.5 block text-sm font-semibold text-ink">{t.profile.emailAddress}</span>
+                  <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-3 text-ink ring-1 ring-line">
+                    <Mail size={15} className="shrink-0 text-muted" aria-hidden />
+                    <span dir="ltr" className="truncate">
+                      {me.email}
                     </span>
                   </div>
                 </div>
@@ -186,34 +191,28 @@ function ProfileForm() {
           <ChevronLeft size={18} className="text-muted ltr:rotate-180" aria-hidden />
         </Link>
 
-        <section className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50 p-4">
-          <h2 className="flex items-center gap-1.5 text-sm font-bold text-amber-900">
-            <FlaskConical size={15} aria-hidden />
-            {t.demo.tools}
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link href={href("/welcome")} className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-              <UserPlus size={15} aria-hidden />
-              {t.demo.signUp}
-            </Link>
-            <Link href={href("/admin")} className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-              <ShieldCheck size={15} aria-hidden />
+        {/* only the people who run a section */}
+        {me.adminOf.length > 0 && (
+          <Link href={href("/admin")} className="flex items-center justify-between rounded-3xl bg-white p-4 font-semibold text-ink shadow-[0_6px_20px_-12px_rgba(11,29,77,0.25)]">
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-sky" aria-hidden />
               {t.demo.admin}
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                reset();
-                toast(t.demo.resetDone);
-                router.push(href("/"));
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200"
-            >
-              <RotateCcw size={15} aria-hidden />
-              {t.demo.reset}
-            </button>
-          </div>
-        </section>
+            </span>
+            <ChevronLeft size={18} className="text-muted ltr:rotate-180" aria-hidden />
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={async () => {
+            await signOut();
+            router.replace(href("/welcome"));
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-3xl bg-white p-4 font-semibold text-coral shadow-[0_6px_20px_-12px_rgba(11,29,77,0.25)]"
+        >
+          <LogOut size={18} className="rtl:rotate-180" aria-hidden />
+          {t.profile.signOut}
+        </button>
       </Body>
     </div>
   );

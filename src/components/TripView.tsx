@@ -12,7 +12,7 @@ import { FlightLine, KindBadge, StyleChips } from "./TripBits";
 import { BackButton, Card, PointsPill, Sheet, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
 import { daysBetween, deadlineOf, flexOf, formatDay, isOpen } from "@/lib/dates";
-import { canSee, statsOf } from "@/lib/rules";
+import { canSee } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Party, Trip, User } from "@/lib/types";
 
@@ -55,7 +55,7 @@ export function TripView({ id }: { id: string }) {
 
   const mine = trip.ownerId === meId;
   const countdown = t.countdown(Math.max(0, daysBetween(today, trip.startDate)));
-  const stats = statsOf(owner, trips, requests);
+  const stats = owner.stats;
 
   return (
     <div>

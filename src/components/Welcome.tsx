@@ -1,36 +1,50 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Hourglass, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Hourglass, Mail, ShieldCheck } from "lucide-react";
 import { LogoMark } from "./Logo";
 import { PartyPicker } from "./PartyPicker";
 import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profile";
 import { Photo } from "./Photo";
 import { Field, LangToggle, inputClass, primaryButton } from "./ui";
-import { useT, useToast } from "./Providers";
-import { formatPhone, samePhone } from "@/lib/rules";
+import { useT } from "./Providers";
+import { phoneDigits } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { AgeGroup, AvatarId, Gender, Observance, Pace, Party } from "@/lib/types";
 
 const isFullName = (name: string) => name.trim().split(/\s+/).length >= 2;
-const isPhone = (phone: string) => /^0?5\d{8}$/.test(phone.replace(/\D/g, ""));
+const isPhone = (phone: string) => /^05\d{8}$/.test(phoneDigits(phone));
+const isEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
 const STEPS = 5;
 
-/** signing up: phone, SMS code, profile, travel style, a recommendation, then the section's admins approve */
-export function Welcome() {
-  const { t, href } = useT();
-  const toast = useToast();
-  const router = useRouter();
-  const { users, meId, signUp, viewAs, approveUser } = useApp();
-  const me = findUser(users, meId);
+/** POST to the sign-in API; the answer's JSON, or { error } with the server's code */
+async function post(url: string, body: object): Promise<{ error?: string; status?: string }> {
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return await res.json().catch(() => ({ error: res.ok ? undefined : "unknown" }));
+  } catch {
+    return { error: "network" };
+  }
+}
 
-  const [step, setStep] = useState(me?.status === "pending" ? 6 : 0);
-  const [phone, setPhone] = useState("");
+/**
+ * Signing in or up with an email code. A member is in after the code; someone new fills in their
+ * profile and a recommendation, then waits for the section's admins.
+ */
+export function Welcome() {
+  const { t, lang, href } = useT();
+  const router = useRouter();
+  const { ready, signedIn, users, meId, refresh } = useApp();
+  const me = signedIn ? findUser(users, meId) : undefined;
+
+  const [step, setStep] = useState(0);
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [nickname, setNickname] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [avatar, setAvatar] = useState<AvatarId>("compass");
   const [ageGroup, setAgeGroup] = useState<AgeGroup>("26-35");
@@ -41,43 +55,90 @@ export function Welcome() {
   const [referrerName, setReferrerName] = useState("");
   const [referrerPhone, setReferrerPhone] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [resent, setResent] = useState(false);
 
-  const sectionMembers = users.filter((u) => u.status === "active" && u.gender === gender);
+  // a member who is already in has nothing to do here
+  useEffect(() => {
+    if (me?.status === "active") router.replace(href("/"));
+  }, [me?.status, router, href]);
 
+  const errorText = (code: string) => t.errors[code as keyof typeof t.errors] ?? t.errors.unknown;
 
-  const next = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (step === 1 && !isPhone(phone)) return setError(t.welcome.errors.phone);
-    if (step === 2 && !/^\d{4}$/.test(code)) return setError(t.welcome.errors.code);
-    if (step === 3 && !nickname.trim()) return setError(t.welcome.errors.nickname);
-    if (step === 3 && !isFullName(fullName)) return setError(t.welcome.errors.fullName);
-    if (step === 3 && !gender) return setError(t.welcome.errors.gender);
-    if (step === 5) {
-      // the recommender is found by phone (members sign up with theirs); the name is kept for the admins to check
-      if (!isFullName(referrerName)) return setError(t.welcome.errors.fullName);
-      if (!isPhone(referrerPhone)) return setError(t.welcome.errors.phone);
-      const by = sectionMembers.find((u) => samePhone(u.phone, referrerPhone));
-      if (!by) return setError(t.welcome.referralNotFound);
-      const id = signUp({
-        nickname: nickname.trim(),
-        fullName: fullName.trim(),
-        phone: phone.replace(/\D/g, ""),
-        avatar,
-        gender: gender as Gender,
-        party,
-        ageGroup,
-        observance,
-        pace,
-        city: city.trim(),
-        about: "",
-        referredBy: by.id,
-        referral: { name: referrerName.trim(), phone: formatPhone(referrerPhone) },
-      });
-      viewAs(id);
-    }
-    setStep((s) => s + 1);
+  const sendCode = async () => {
+    const answer = await post("/api/auth/code", { email: email.trim(), lang });
+    if (answer.error) return setError(errorText(answer.error));
+    setStep(2);
   };
+
+  const next = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      if (step === 1) {
+        if (!isEmail(email)) return setError(t.errors.bad_email);
+        await sendCode();
+      } else if (step === 2) {
+        if (!/^\d{6}$/.test(code)) return setError(t.welcome.errors.code);
+        const answer = await post("/api/auth/verify", { email: email.trim(), code });
+        if (answer.error) return setError(errorText(answer.error));
+        if (answer.status === "in") {
+          await refresh();
+          router.replace(href("/"));
+        } else setStep(3);
+      } else if (step === 3) {
+        if (!nickname.trim()) return setError(t.welcome.errors.nickname);
+        if (!isFullName(fullName)) return setError(t.welcome.errors.fullName);
+        if (!isPhone(phone)) return setError(t.welcome.errors.phone);
+        if (!gender) return setError(t.welcome.errors.gender);
+        setStep(4);
+      } else if (step === 4) {
+        setStep(5);
+      } else if (step === 5) {
+        const referral = referrerName.trim() || referrerPhone.trim() ? { name: referrerName.trim(), phone: referrerPhone.trim() } : undefined;
+        if (referral && !isFullName(referral.name)) return setError(t.welcome.errors.fullName);
+        if (referral && !isPhone(referral.phone)) return setError(t.welcome.errors.phone);
+        const answer = await post("/api/auth/signup", {
+          nickname: nickname.trim(),
+          fullName: fullName.trim(),
+          phone: phoneDigits(phone),
+          avatar,
+          gender,
+          party,
+          ageGroup,
+          observance,
+          pace,
+          city: city.trim(),
+          about: "",
+          referral,
+          lang,
+        });
+        if (answer.error) return setError(errorText(answer.error));
+        // the founders come straight in; everyone else waits for the section's admins
+        await refresh();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!ready) return <div className="min-h-[calc(100dvh-2rem)] animate-pulse bg-navy/90" aria-busy />;
+
+  if (me?.status === "pending") {
+    return (
+      <div className="flex min-h-[calc(100dvh-2rem)] flex-col items-center justify-center px-6 text-center">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-soft text-sky">
+          <Hourglass size={36} aria-hidden />
+        </span>
+        <h1 className="mt-5 text-3xl font-extrabold text-ink">{t.welcome.pendingTitle}</h1>
+        <p className="mt-3 leading-relaxed text-muted">
+          {me.referral?.name ? t.welcome.pendingText(me.referral.name) : t.welcome.pendingNoReferral}
+        </p>
+      </div>
+    );
+  }
 
   if (step === 0) {
     return (
@@ -105,36 +166,21 @@ export function Welcome() {
     );
   }
 
-  if (step === 6 && me) {
-    return (
-      <div className="flex min-h-[calc(100dvh-2rem)] flex-col items-center justify-center px-6 text-center">
-        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-soft text-sky">
-          <Hourglass size={36} aria-hidden />
-        </span>
-        <h1 className="mt-5 text-3xl font-extrabold text-ink">{t.welcome.pendingTitle}</h1>
-        <p className="mt-3 leading-relaxed text-muted">{t.welcome.pendingText(me.referral?.name ?? "")}</p>
-        <button
-          type="button"
-          onClick={() => {
-            approveUser(me.id);
-            toast(t.admin.approved);
-            router.push(href("/"));
-          }}
-          className="mt-8 w-full rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
-        >
-          {t.welcome.demoApprove}
-        </button>
-      </div>
-    );
-  }
-
-  const titles = [t.welcome.phoneTitle, t.welcome.codeTitle, t.welcome.aboutTitle, t.welcome.styleTitle, t.welcome.referralTitle];
+  const titles = [t.welcome.emailTitle, t.welcome.codeTitle, t.welcome.aboutTitle, t.welcome.styleTitle, t.welcome.referralTitle];
 
   return (
     <form onSubmit={next} noValidate className="flex min-h-[calc(100dvh-2rem)] flex-col">
       <div className="bg-gradient-to-br from-navy to-navy-2 px-5 pb-8 pt-5 text-white">
         <div className="flex items-center justify-between text-sm">
-          <button type="button" onClick={() => setStep((s) => s - 1)} className="font-semibold opacity-85 hover:opacity-100">
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              // after the code there is no going back to it: the profile steps go back to each other
+              setStep((s) => (s === 3 ? 1 : s - 1));
+            }}
+            className="font-semibold opacity-85 hover:opacity-100"
+          >
             {t.welcome.back}
           </button>
           <span className="opacity-75">{t.welcome.step(step, STEPS)}</span>
@@ -149,27 +195,55 @@ export function Welcome() {
 
       <div className="relative -mt-4 flex-1 space-y-5 rounded-t-[28px] bg-mist px-5 pt-6">
         {step === 1 && (
-          <Field label={t.welcome.phone} htmlFor="phone">
-            <input id="phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="050-0000000" className={`${inputClass} text-lg tracking-wider`} />
-            <p className="mt-2 text-sm text-muted">{t.welcome.phoneHint}</p>
+          <Field label={t.welcome.email} htmlFor="email">
+            <input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              dir="ltr"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className={`${inputClass} text-lg`}
+            />
+            <p className="mt-2 text-sm text-muted">{t.welcome.emailHint}</p>
           </Field>
         )}
 
         {step === 2 && (
           <div>
-            <p className="mb-3 text-sm text-muted">{t.welcome.codeHint(phone)}</p>
+            <p className="mb-3 flex items-center gap-2 text-sm text-muted">
+              <Mail size={16} className="shrink-0" aria-hidden />
+              {t.welcome.codeHint(email.trim())}
+            </p>
             <input
               aria-label={t.welcome.codeTitle}
               inputMode="numeric"
               autoComplete="one-time-code"
               dir="ltr"
-              maxLength={4}
+              autoFocus
+              maxLength={6}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="••••"
-              className={`${inputClass} digits text-center text-3xl font-bold tracking-[0.6em]`}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="••••••"
+              className={`${inputClass} digits text-center text-3xl font-bold tracking-[0.5em]`}
             />
-            <p className="mt-2 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">{t.welcome.demoCode}</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setError("");
+                setBusy(true);
+                await sendCode();
+                setBusy(false);
+                setResent(true);
+              }}
+              className="mt-3 text-sm font-semibold text-sky disabled:opacity-50"
+            >
+              {resent ? t.welcome.codeSent : t.welcome.resend}
+            </button>
           </div>
         )}
 
@@ -181,6 +255,20 @@ export function Welcome() {
             <Field label={t.profile.fullName} htmlFor="fullName">
               <input id="fullName" value={fullName} maxLength={60} autoComplete="name" onChange={(e) => setFullName(e.target.value)} className={inputClass} />
               <p className="mt-1 text-xs text-muted">{t.welcome.fullNameHint}</p>
+            </Field>
+            <Field label={t.profile.phone} htmlFor="phone">
+              <input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                dir="ltr"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="050-0000000"
+                className={`${inputClass} text-start tracking-wider`}
+              />
+              <p className="mt-1 text-xs text-muted">{t.welcome.phoneHint}</p>
             </Field>
             <fieldset>
               <legend className="mb-2 text-sm font-semibold text-ink">{t.profile.gender}</legend>
@@ -233,12 +321,9 @@ export function Welcome() {
                 value={referrerPhone}
                 onChange={(e) => setReferrerPhone(e.target.value)}
                 placeholder="050-0000000"
-                className={`${inputClass} tracking-wider`}
+                className={`${inputClass} text-start tracking-wider`}
               />
             </Field>
-            <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-              {t.welcome.referralExamples(sectionMembers.slice(0, 3).map((u) => `${u.fullName} ${formatPhone(u.phone)}`).join(" · "))}
-            </p>
           </>
         )}
 
@@ -248,7 +333,7 @@ export function Welcome() {
           </p>
         )}
 
-        <button type="submit" className={`${primaryButton} w-full py-4`}>
+        <button type="submit" disabled={busy} className={`${primaryButton} w-full py-4`}>
           {step === 1 ? t.welcome.sendCode : step === 2 ? t.welcome.verify : step === 5 ? t.welcome.submit : t.welcome.next}
         </button>
       </div>

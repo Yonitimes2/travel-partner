@@ -84,9 +84,13 @@ export interface User {
   nickname: string;
   avatar: AvatarId;
   gender: Gender;
-  /** private: only the section's admins see the full name and phone */
+  /**
+   * private: only the person and the section's admins see the full name, phone and email;
+   * everyone else gets them empty from the server
+   */
   fullName: string;
   phone: string;
+  email: string;
   party: Party;
   ageGroup: AgeGroup;
   observance: Observance;
@@ -98,10 +102,27 @@ export interface User {
   referredBy?: string;
   /** the recommender's full name and phone as typed at sign-up, for the admins to check */
   referral?: { name: string; phone: string };
-  /** trips and partners from before the data in this prototype, so the points have history */
+  /** trips and partners from before the app, so the points have history */
   history: { trips: number; joined: number };
+  /** activity points, counted by the server from all accepted requests */
+  stats: Stats;
   notify: { push: boolean; email: boolean };
+  /** the sections this person manages (empty for everyone but the admins) */
+  adminOf: Gender[];
+  /** the language emails go out in */
+  lang: Lang;
+  /**
+   * only the nickname and avatar are real: someone who asked to join my planned trip
+   * (the rest of their profile opens when the trip is closed)
+   */
+  limited?: boolean;
   createdAt: string;
+}
+
+export interface Stats {
+  trips: number;
+  joined: number;
+  points: number;
 }
 
 export interface Trip {
@@ -164,4 +185,16 @@ export interface Report {
 export interface Block {
   by: string;
   who: string;
+}
+
+/** everything one signed-in person may see, as the server sends it */
+export interface AppData {
+  meId: string;
+  users: User[];
+  trips: Trip[];
+  requests: JoinRequest[];
+  messages: Message[];
+  reports: Report[];
+  /** only the blocks I made (who blocked me stays hidden; the server leaves them out) */
+  blocks: Block[];
 }

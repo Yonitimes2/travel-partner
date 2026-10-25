@@ -5,6 +5,7 @@ import type { Block, JoinRequest, Message, Party, Report, Trip, User } from "./t
 
 const SOLO: Party = { type: "solo" };
 
+/** the two people to sign in as in development (each runs their own section): one per section */
 export { DEMO_MAN, DEMO_WOMAN };
 
 export interface SeedData {
@@ -16,9 +17,10 @@ export interface SeedData {
   blocks: Block[];
 }
 
-type UserSeed = Omit<User, "status" | "notify" | "createdAt"> & Partial<Pick<User, "status" | "createdAt">>;
+type UserSeed = Omit<User, "status" | "notify" | "createdAt" | "email" | "stats" | "adminOf" | "lang"> &
+  Partial<Pick<User, "status" | "createdAt">>;
 
-/** sample data with dates relative to today, so the prototype never goes stale */
+/** sample data for development (/api/dev/seed), with dates relative to today so it never goes stale */
 export function makeSeed(today: string, now: Date): SeedData {
   const d = (n: number) => addDays(today, n);
   const ago = (hours: number) => new Date(now.getTime() - hours * 3_600_000).toISOString();
@@ -46,9 +48,14 @@ export function makeSeed(today: string, now: Date): SeedData {
 
   const users: User[] = people.map((p) => ({
     status: "active",
-    notify: { push: true, email: false },
+    notify: { push: true, email: true },
     createdAt: ago(24 * 90),
     ...p,
+    // addresses that can never receive mail
+    email: `${p.id}@example.test`,
+    stats: { trips: 0, joined: 0, points: 0 },
+    adminOf: p.id === DEMO_MAN ? ["male"] : p.id === DEMO_WOMAN ? ["female"] : [],
+    lang: "he",
   }));
 
   const trip = (t: Omit<Trip, "status"> & { status?: Trip["status"] }): Trip => ({ status: "open", ...t });

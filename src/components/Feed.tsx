@@ -10,7 +10,7 @@ import { LangToggle, PointsPill, SegTabs } from "./ui";
 import { useT } from "./Providers";
 import { formatMonth, isOpen, monthsOf } from "@/lib/dates";
 import { PHOTOS, photosOf } from "@/lib/photos";
-import { canSee, statsOf } from "@/lib/rules";
+import { canSee } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Area, PhotoId, TripKind, Wanted } from "@/lib/types";
 
@@ -20,7 +20,7 @@ const HERO_PHOTOS: PhotoId[] = ["europe-carezza", "asia-halong", "center-caesare
 
 export function Feed() {
   const { t, lang, href } = useT();
-  const { users, trips, requests, blocks, meId, today, feed, setFeed } = useApp();
+  const { users, trips, blocks, meId, today, feed, setFeed } = useApp();
   const me = findUser(users, meId)!;
 
   // the viewer's section: same-gender trips plus family trips from both sections, still open
@@ -45,7 +45,8 @@ export function Feed() {
   );
   const filtered = Boolean(feed.area || feed.wanted || feed.month);
   const countOf = (kind: TripKind) => section.filter((tr) => tr.kind === kind).length;
-  const pointsOf = (userId: string) => statsOf(findUser(users, userId)!, trips, requests).points;
+  // points are counted by the server, from everyone's requests (the app only sees its own)
+  const pointsOf = (userId: string) => findUser(users, userId)?.stats.points ?? 0;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t.greeting.morning : hour < 17 ? t.greeting.noon : t.greeting.evening;

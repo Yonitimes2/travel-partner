@@ -1,5 +1,5 @@
 import { isOpen } from "./dates";
-import type { Block, JoinRequest, Party, Trip, User } from "./types";
+import type { Block, JoinRequest, Party, Stats, Trip, User } from "./types";
 
 /** the price of a closed trip (accepting partners); free while the beta lasts */
 export const TRIP_FEE = "₪79";
@@ -25,6 +25,12 @@ export function canSee(trip: Trip, owner: User, me: User, blocks: Block[]) {
 export const partySize = (p: Party) =>
   p.type === "solo" ? 1 : p.type === "group" ? 1 + Math.max(1, p.others) : p.parents + p.kids;
 
+/** a phone number as it's kept: digits only, Israeli form ("050…", also from "+972 50…") */
+export const phoneDigits = (phone: string) => {
+  const d = phone.replace(/\D/g, "");
+  return d.startsWith("972") ? `0${d.slice(3)}` : d.length === 9 && d.startsWith("5") ? `0${d}` : d;
+};
+
 /** phone numbers compared by their digits only */
 export const samePhone = (a: string, b: string) => a.replace(/\D/g, "") === b.replace(/\D/g, "");
 
@@ -33,8 +39,8 @@ export const formatPhone = (phone: string) => {
   return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3)}` : phone;
 };
 
-/** points come from activity only: trips that people joined, and how many joined */
-export function statsOf(user: User, trips: Trip[], requests: JoinRequest[]) {
+/** points come from activity only: trips that people joined, and how many joined (counted on the server) */
+export function statsOf(user: Pick<User, "id" | "history">, trips: Pick<Trip, "id" | "ownerId">[], requests: JoinRequest[]): Stats {
   const mine = new Set(trips.filter((t) => t.ownerId === user.id).map((t) => t.id));
   const accepted = requests.filter((r) => r.status === "accepted" && mine.has(r.tripId));
   const tripCount = user.history.trips + new Set(accepted.map((r) => r.tripId)).size;

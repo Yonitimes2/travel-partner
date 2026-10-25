@@ -11,7 +11,6 @@ import { ProfileFacts } from "./TripView";
 import { Body, Empty, PageHeader, PointsPill, SegTabs, Sheet, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
 import { formatRange, isOpen } from "@/lib/dates";
-import { statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { JoinRequest, RequestStatus, Trip } from "@/lib/types";
 
@@ -54,7 +53,7 @@ function Posted() {
 function PostedTrip({ trip }: { trip: Trip }) {
   const { t, lang, href } = useT();
   const toast = useToast();
-  const { users, trips, requests, today, respond, closeTrip, setTripStatus, deleteTrip } = useApp();
+  const { users, requests, today, respond, closeTrip, setTripStatus, deleteTrip } = useApp();
   const [paying, setPaying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -147,7 +146,7 @@ function PostedTrip({ trip }: { trip: Trip }) {
 
         <ul className="mt-3 space-y-2.5">
           {incoming.map((r) => (
-            <RequestRow key={r.id} request={r} locked={locked} onRespond={respond} pointsOf={(id) => statsOf(findUser(users, id)!, trips, requests).points} />
+            <RequestRow key={r.id} request={r} locked={locked} onRespond={respond} pointsOf={(id) => findUser(users, id)?.stats.points ?? 0} />
           ))}
         </ul>
       </div>

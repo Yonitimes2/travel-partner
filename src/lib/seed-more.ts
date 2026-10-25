@@ -230,7 +230,11 @@ export function moreSeed(d: (days: number) => string, ago: (hours: number) => st
       about,
       status: "active",
       history: { trips, joined },
-      notify: { push: true, email: false },
+      notify: { push: true, email: true },
+      email: `${id}@example.test`,
+      stats: { trips: 0, joined: 0, points: 0 },
+      adminOf: [],
+      lang: "he",
       createdAt: ago(24 * (30 + i * 3)),
     });
 
@@ -243,7 +247,8 @@ export function moreSeed(d: (days: number) => string, ago: (hours: number) => st
       id, nickname, fullName, phone: `0506${String(hours).padStart(6, "0")}`, avatar, gender, party: SOLO,
       ageGroup: "26-35", observance: "kosher", pace: "medium", city, about: "", status: "pending",
       referredBy: by, referral: { name: typed, phone: `${recommender.phone.slice(0, 3)}-${recommender.phone.slice(3)}` },
-      history: { trips: 0, joined: 0 }, notify: { push: true, email: false }, createdAt: ago(hours),
+      history: { trips: 0, joined: 0 }, notify: { push: true, email: true }, createdAt: ago(hours),
+      email: `${id}@example.test`, stats: { trips: 0, joined: 0, points: 0 }, adminOf: [], lang: "he",
     };
   };
   users.push(
