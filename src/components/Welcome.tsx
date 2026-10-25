@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Compass, Hourglass, ShieldCheck } from "lucide-react";
 import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profile";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
 import { findUser, useApp } from "@/lib/store";
@@ -56,7 +56,7 @@ export function Welcome() {
   if (step === 0) {
     return (
       <div className="relative min-h-[calc(100dvh-2rem)] overflow-hidden text-white">
-        <Scene area="jerusalem" className="absolute inset-0 h-full w-full" />
+        <Photo area="jerusalem" photo="jerusalem-citadel-view" sizes="(max-width: 448px) 100vw, 448px" preload />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-navy/25 to-navy" />
         <div className="relative flex min-h-[calc(100dvh-2rem)] flex-col px-6 pb-10 pt-5">
           <div className="flex items-center justify-between">

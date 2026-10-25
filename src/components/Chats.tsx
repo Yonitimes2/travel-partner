@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Lock, SendHorizontal, ShieldCheck } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { UserActions } from "./Moderation";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { BackButton, Body, Card, Empty, PageHeader } from "./ui";
 import { useT } from "./Providers";
 import { formatDay, formatTime } from "@/lib/dates";
@@ -57,8 +57,8 @@ export function ChatList() {
                 <li key={request.id}>
                   <Link href={href(`/chat/${request.id}`)} className="flex items-center gap-3 rounded-3xl bg-white p-3 shadow-[0_6px_20px_-12px_rgba(11,29,77,0.25)] transition hover:shadow-md">
                     <span className="relative shrink-0">
-                      <span className="block h-14 w-14 overflow-hidden rounded-2xl">
-                        <Scene area={trip.area} className="h-full w-full" />
+                      <span className="relative block h-14 w-14 overflow-hidden rounded-2xl">
+                        <Photo area={trip.area} photo={trip.photo} seed={trip.id} sizes="56px" />
                       </span>
                       <span className="absolute -bottom-1 -end-1 rounded-full ring-2 ring-white">
                         <Avatar id={other.avatar} size={26} />

@@ -17,6 +17,28 @@ export type TripStyle = "hiking" | "nature" | "cities" | "relaxed" | "adventure"
 
 export type TravelsAs = "solo" | "family";
 
+export type PhotoId =
+  | "north-kinneret"
+  | "north-golan-vineyard"
+  | "north-golan-flowers"
+  | "center-caesarea"
+  | "center-jaffa"
+  | "jerusalem-citadel-view"
+  | "jerusalem-citadel-walls"
+  | "south-ramon"
+  | "south-eilat"
+  | "south-negev"
+  | "europe-carezza"
+  | "europe-seceda"
+  | "europe-swiss-lake"
+  | "europe-prague"
+  | "usa-manhattan"
+  | "usa-empire-state"
+  | "asia-halong"
+  | "asia-halong-sunset"
+  | "other-wing-sunset"
+  | "other-wing-clouds";
+
 export type AgeGroup = "18-25" | "26-35" | "36-50" | "50+";
 
 /** how strictly kashrut and Shabbat are kept on a trip */
@@ -72,6 +94,8 @@ export interface Trip {
   area: Area;
   /** free text, e.g. "הדולומיטים, צפון איטליה" */
   place: string;
+  /** the cover photo; without one, a photo of the area is picked */
+  photo?: PhotoId;
   /** yyyy-mm-dd */
   startDate: string;
   endDate: string;

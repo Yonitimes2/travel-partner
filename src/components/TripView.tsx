@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Check, Clock, Hourglass, Lock, MapPin, MessageCircle, Minus, Pencil, Plus, Users, X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { UserActions } from "./Moderation";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { FlightLine, KindBadge, StyleChips } from "./TripBits";
 import { BackButton, Card, PointsPill, Sheet, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
@@ -58,7 +58,7 @@ export function TripView({ id }: { id: string }) {
   return (
     <div>
       <section className="relative h-72 overflow-hidden text-white">
-        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
+        <Photo area={trip.area} photo={trip.photo} seed={trip.id} sizes="(max-width: 448px) 100vw, 448px" preload />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/10 to-navy/90" />
         <div className="relative flex h-full flex-col px-4 pb-14 pt-4">
           <div className="flex items-center justify-between">

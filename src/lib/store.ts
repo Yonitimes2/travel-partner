@@ -177,8 +177,8 @@ export const useApp = create<AppState>()(
       reset: () => set({ ...makeSeed(todayISO(), new Date()), meId: DEMO_MAN }),
     }),
     {
-      // v2: closed trips, families in both sections, points, reports and sign-ups
-      name: "travel-partner-demo-v2",
+      // v3: trip cover photos
+      name: "travel-partner-demo-v3",
       skipHydration: true,
       partialize: ({ users, trips, requests, messages, reports, blocks, meId }) => ({
         users,

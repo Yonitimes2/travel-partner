@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BadgeCheck, Hourglass, Lightbulb, Plane, Users } from "lucide-react";
 import { Avatar } from "./Avatar";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { PointsPill } from "./ui";
 import { useT } from "./Providers";
 import { daysBetween, deadlineOf, formatDay } from "@/lib/dates";
@@ -88,8 +88,8 @@ export function TripCard({ trip, owner, today, points }: { trip: Trip; owner: Us
       className="block overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-14px_rgba(11,29,77,0.35)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-14px_rgba(11,29,77,0.45)]"
     >
       <div className="relative h-36">
-        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/25 to-transparent" />
+        <Photo area={trip.area} photo={trip.photo} seed={trip.id} sizes="(max-width: 448px) 92vw, 416px" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/10 to-transparent" />
         <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
           <KindBadge kind={trip.kind} onDark />
           <ClosesChip trip={trip} today={today} />

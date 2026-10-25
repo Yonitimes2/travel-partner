@@ -7,10 +7,12 @@ import { PaymentPanel } from "./Payment";
 import { Body, Chip, Field, PageHeader, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
 import { AREAS } from "./Feed";
+import { Photo } from "./Photo";
 import { addDays, daysBetween } from "@/lib/dates";
+import { photosOf } from "@/lib/photos";
 import { BETA, PLANNED_LIMIT, TRIP_FEE, activePlanned } from "@/lib/rules";
 import { findUser, useApp, type TripInput } from "@/lib/store";
-import type { Area, Deadline, Trip, TripKind, TripStyle, Wanted } from "@/lib/types";
+import type { Area, Deadline, PhotoId, Trip, TripKind, TripStyle, Wanted } from "@/lib/types";
 
 const WANTED: Wanted[] = ["one", "few", "families"];
 const STYLES: TripStyle[] = ["hiking", "nature", "cities", "relaxed", "adventure", "shabbat", "food"];
@@ -32,6 +34,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
   const [kind, setKind] = useState<TripKind>(trip?.kind ?? (plannedFull ? "closed" : "planned"));
   const [place, setPlace] = useState(trip?.place ?? "");
   const [area, setArea] = useState<Area | "">(trip?.area ?? "");
+  const [photo, setPhoto] = useState<PhotoId | undefined>(trip?.photo);
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
   const [wanted, setWanted] = useState<Wanted>(trip?.wanted ?? "few");
@@ -65,7 +68,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
       requestAnimationFrame(() => document.querySelector("[data-error]")?.scrollIntoView({ block: "center", behavior: "smooth" }));
       return null;
     }
-    return { kind, place: place.trim(), area: area as Area, startDate, endDate, wanted, styles, description: description.trim(), deadline };
+    return { kind, place: place.trim(), area: area as Area, photo: photo ?? photosOf(area as Area)[0], startDate, endDate, wanted, styles, description: description.trim(), deadline };
   };
 
   const save = (input: TripInput) => {
@@ -149,7 +152,15 @@ export function TripForm({ trip }: { trip?: Trip }) {
               <input id="place" value={place} onChange={(e) => setPlace(e.target.value)} placeholder={t.newTrip.placePlaceholder} className={inputClass} />
             </Field>
             <Field label={t.newTrip.area} error={errors.area} htmlFor="area">
-              <select id="area" value={area} onChange={(e) => setArea(e.target.value as Area)} className={inputClass}>
+              <select
+                id="area"
+                value={area}
+                onChange={(e) => {
+                  setArea(e.target.value as Area);
+                  setPhoto(undefined);
+                }}
+                className={inputClass}
+              >
                 <option value="" disabled>
                   {t.newTrip.pickArea}
                 </option>
@@ -160,6 +171,28 @@ export function TripForm({ trip }: { trip?: Trip }) {
                 ))}
               </select>
             </Field>
+            {area && (
+              <fieldset>
+                <legend className="mb-2 text-sm font-semibold text-ink">{t.newTrip.cover}</legend>
+                <div className="no-scrollbar -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1">
+                  {photosOf(area).map((id, i) => {
+                    const on = (photo ?? photosOf(area)[0]) === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={on}
+                        aria-label={`${t.newTrip.cover} ${i + 1}`}
+                        onClick={() => setPhoto(id)}
+                        className={`relative h-20 w-32 shrink-0 overflow-hidden rounded-2xl transition ${on ? "ring-[3px] ring-sky ring-offset-2 ring-offset-mist" : "opacity-75 hover:opacity-100"}`}
+                      >
+                        <Photo area={area} photo={id} sizes="128px" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
             <div>
               <div className="grid grid-cols-2 gap-2.5">
                 <Field label={t.newTrip.from} htmlFor="from">

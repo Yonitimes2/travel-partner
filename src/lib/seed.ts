@@ -54,50 +54,50 @@ export function makeSeed(today: string, now: Date): SeedData {
   const trips: Trip[] = [
     // men's section
     trip({
-      id: "t-dolomites", ownerId: "u-avi", kind: "closed", area: "europe", place: "הדולומיטים, צפון איטליה",
+      id: "t-dolomites", photo: "europe-seceda", ownerId: "u-avi", kind: "closed", area: "europe", place: "הדולומיטים, צפון איטליה",
       startDate: d(24), endDate: d(31), wanted: "few", styles: ["hiking", "nature", "shabbat"],
       description: "טיסה ורכב כבר סגורים. מסלולי יום בהרים, שבת בקורטינה עם מניין מקומי. מחפשים עוד 2–3 שמגיעים בכושר סביר.",
       deadline: { type: "daysBefore", days: 10 }, createdAt: ago(30),
     }),
     trip({
-      id: "t-ramon", ownerId: "u-moshe", kind: "planned", area: "south", place: "מכתש רמון והערבה",
+      id: "t-ramon", photo: "south-ramon", ownerId: "u-moshe", kind: "planned", area: "south", place: "מכתש רמון והערבה",
       startDate: d(12), endDate: d(14), wanted: "families", styles: ["nature", "adventure"],
       description: "רעיון לסוף שבוע ארוך עם הילדים, טיול ג'יפים במכתש. אם יהיו עוד 2 משפחות — סוגרים מדריך ולינה בחאן.",
       deadline: { type: "date", date: d(6) }, createdAt: ago(50),
     }),
     trip({
-      id: "t-vietnam", ownerId: "u-daniel", kind: "planned", area: "asia", place: "צפון וייטנאם",
+      id: "t-vietnam", photo: "asia-halong", ownerId: "u-daniel", kind: "planned", area: "asia", place: "צפון וייטנאם",
       startDate: d(60), endDate: d(74), wanted: "one", styles: ["adventure", "cities", "food"],
       description: "שבועיים בצפון וייטנאם — סאפה ומפרץ הא לונג. אוכל כשר מבית חב״ד. מחפש שותף אחד בקצב דומה.",
       deadline: { type: "daysBefore", days: 21 }, createdAt: ago(8),
     }),
     trip({
-      id: "t-galil", ownerId: "u-shmuel", kind: "closed", area: "north", place: "שביל ישראל — קטע הגליל",
+      id: "t-galil", photo: "north-golan-vineyard", ownerId: "u-shmuel", kind: "closed", area: "north", place: "שביל ישראל — קטע הגליל",
       startDate: d(5), endDate: d(8), wanted: "one", styles: ["hiking", "nature"],
       description: "סגרתי לינות בדרך. ארבעה ימים של הליכה, כ־15 ק״מ ביום. אם מישהו רוצה להצטרף — בשמחה.",
       deadline: { type: "daysBefore", days: 2 }, createdAt: ago(70),
     }),
     trip({
-      id: "t-prague", ownerId: "u-yehuda", kind: "planned", area: "europe", place: "פראג ווינה",
+      id: "t-prague", photo: "europe-prague", ownerId: "u-yehuda", kind: "planned", area: "europe", place: "פראג ווינה",
       startDate: d(40), endDate: d(46), wanted: "few", styles: ["cities", "food", "shabbat"],
       description: "סיור ערים, בתי כנסת עתיקים ומסעדות כשרות. שבת בפראג ליד בית הכנסת אלטנוי.",
       deadline: { type: "date", date: d(25) }, createdAt: ago(20),
     }),
     trip({
-      id: "t-nyc-m", ownerId: "u-avi", kind: "closed", area: "usa", place: "ניו יורק — ברוקלין ומנהטן",
+      id: "t-nyc-m", photo: "usa-manhattan", ownerId: "u-avi", kind: "closed", area: "usa", place: "ניו יורק — ברוקלין ומנהטן",
       startDate: d(70), endDate: d(77), wanted: "few", styles: ["cities", "food", "shabbat"],
       description: "דירה בקראון הייטס סגורה לשבוע. מוזיאונים, סנטרל פארק ושבת עם הקהילה.",
       deadline: { type: "daysBefore", days: 30 }, createdAt: ago(15),
     }),
     // the demo man's own trips: one planned (requests he can't accept yet), one closed (with a chat)
     trip({
-      id: "t-amud", ownerId: DEMO_MAN, kind: "planned", area: "north", place: "נחל עמוד ומירון",
+      id: "t-amud", photo: "north-kinneret", ownerId: DEMO_MAN, kind: "planned", area: "north", place: "נחל עמוד ומירון",
       startDate: d(18), endDate: d(19), wanted: "few", styles: ["hiking", "nature"],
       description: "יום וחצי של הליכה עם לינה בחניון לילה. מחפש 2–3 חבר'ה שאוהבים לקום מוקדם.",
       deadline: { type: "daysBefore", days: 5 }, createdAt: ago(40),
     }),
     trip({
-      id: "t-golan", ownerId: DEMO_MAN, kind: "closed", area: "north", place: "סופ\"ש ג'יפים ברמת הגולן",
+      id: "t-golan", photo: "north-golan-flowers", ownerId: DEMO_MAN, kind: "closed", area: "north", place: "סופ\"ש ג'יפים ברמת הגולן",
       startDate: d(33), endDate: d(35), wanted: "few", styles: ["adventure", "nature", "shabbat"],
       description: "צימר בקצרין סגור לשבת, יום ג'יפים ביום שישי ומסלול מים ביום ראשון.",
       deadline: { type: "daysBefore", days: 7 }, createdAt: ago(60),
@@ -105,37 +105,37 @@ export function makeSeed(today: string, now: Date): SeedData {
 
     // women's section
     trip({
-      id: "t-swiss", ownerId: "u-ruti", kind: "closed", area: "europe", place: "האגמים בשווייץ — לוצרן ואינטרלקן",
+      id: "t-swiss", photo: "europe-swiss-lake", ownerId: "u-ruti", kind: "closed", area: "europe", place: "האגמים בשווייץ — לוצרן ואינטרלקן",
       startDate: d(30), endDate: d(36), wanted: "few", styles: ["nature", "relaxed", "shabbat"],
       description: "דירה כבר מוזמנת עם מקום לעוד 2. טיולים רגועים, רכבות הרים, שבת בלוצרן.",
       deadline: { type: "daysBefore", days: 14 }, createdAt: ago(26),
     }),
     trip({
-      id: "t-apollonia", ownerId: "u-noa", kind: "planned", area: "center", place: "אפולוניה וחוף נפרד בהרצליה",
+      id: "t-apollonia", photo: "center-caesarea", ownerId: "u-noa", kind: "planned", area: "center", place: "אפולוניה וחוף נפרד בהרצליה",
       startDate: d(9), endDate: d(9), wanted: "families", styles: ["relaxed", "nature"],
       description: "רעיון ליום משפחות עם הילדים. אם יהיו עוד 2–3 משפחות נארגן הסעה משותפת.",
       deadline: { type: "date", date: d(5) }, createdAt: ago(12),
     }),
     trip({
-      id: "t-kinneret", ownerId: "u-ayala", kind: "planned", area: "north", place: "סובב כנרת באופניים",
+      id: "t-kinneret", photo: "north-kinneret", ownerId: "u-ayala", kind: "planned", area: "north", place: "סובב כנרת באופניים",
       startDate: d(15), endDate: d(16), wanted: "one", styles: ["adventure", "nature"],
       description: "רכיבה של יומיים סביב הכנרת עם לינה בטבריה. מחפשת שותפה אחת שרוכבת באופן קבוע.",
       deadline: { type: "daysBefore", days: 4 }, createdAt: ago(60),
     }),
     trip({
-      id: "t-nyc", ownerId: "u-shira", kind: "closed", area: "usa", place: "ניו יורק",
+      id: "t-nyc", photo: "usa-empire-state", ownerId: "u-shira", kind: "closed", area: "usa", place: "ניו יורק",
       startDate: d(50), endDate: d(57), wanted: "one", styles: ["cities", "food", "shabbat"],
       description: "טיסות ומלון סגורים, חדר עם מקום לעוד אחת. מוזיאונים, ברוקלין ושבת בקראון הייטס.",
       deadline: { type: "daysBefore", days: 30 }, createdAt: ago(18),
     }),
     trip({
-      id: "t-springs", ownerId: "u-hana", kind: "planned", area: "jerusalem", place: "מעיינות בהרי ירושלים",
+      id: "t-springs", photo: "jerusalem-citadel-view", ownerId: "u-hana", kind: "planned", area: "jerusalem", place: "מעיינות בהרי ירושלים",
       startDate: d(7), endDate: d(7), wanted: "few", styles: ["hiking", "nature"],
       description: "יום הליכה קליל בין מעיינות — עין לבן ועין חנדק. מחפשות עוד כמה.",
       deadline: { type: "daysBefore", days: 2 }, createdAt: ago(5),
     }),
     trip({
-      id: "t-eilat", ownerId: DEMO_WOMAN, kind: "closed", area: "south", place: "מצפה רמון ואילת",
+      id: "t-eilat", photo: "south-eilat", ownerId: DEMO_WOMAN, kind: "closed", area: "south", place: "מצפה רמון ואילת",
       startDate: d(20), endDate: d(23), wanted: "few", styles: ["relaxed", "nature", "shabbat"],
       description: "הזמנתי צימר לשבת במצפה רמון ואז יומיים באילת. יש מקום לעוד 2.",
       deadline: { type: "daysBefore", days: 7 }, createdAt: ago(45),

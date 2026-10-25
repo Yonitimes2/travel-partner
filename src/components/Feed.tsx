@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronDown, Compass, Globe2 } from "lucide-react";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { TripCard } from "./TripBits";
 import { LangToggle, PointsPill, SegTabs } from "./ui";
 import { useT } from "./Providers";
 import { formatMonth, isOpen, monthKey } from "@/lib/dates";
+import { PHOTOS, photosOf } from "@/lib/photos";
 import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
-import type { Area, TripKind, Wanted } from "@/lib/types";
+import type { Area, PhotoId, TripKind, Wanted } from "@/lib/types";
 
 export const AREAS: Area[] = ["north", "center", "jerusalem", "south", "europe", "usa", "asia", "other"];
 const WANTED: Wanted[] = ["one", "few", "families"];
+const HERO_PHOTOS: PhotoId[] = ["europe-carezza", "asia-halong", "center-caesarea", "south-ramon", "europe-seceda"];
 
 export function Feed() {
   const { t, lang, href } = useT();
@@ -46,14 +48,15 @@ export function Feed() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t.greeting.morning : hour < 17 ? t.greeting.noon : t.greeting.evening;
-  const heroArea: Area = feed.area || shown[0]?.area || "other";
+  // the hero: the chosen area's photo, or one of the brightest destinations, a different one each day
+  const heroPhoto: PhotoId = feed.area ? photosOf(feed.area)[0] : HERO_PHOTOS[Number(today.replaceAll("-", "")) % HERO_PHOTOS.length];
 
   return (
     <div>
       {/* the hero: destination art under navy, like an airline home screen */}
       <section className="relative h-[290px] overflow-hidden text-white">
-        <Scene area={heroArea} className="absolute inset-0 h-full w-full transition-opacity" />
-        <div className="absolute inset-0 bg-gradient-to-b from-navy/55 via-navy/5 to-navy/80" />
+        <Photo area={PHOTOS[heroPhoto].area} photo={heroPhoto} sizes="(max-width: 448px) 100vw, 448px" preload />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-transparent to-navy/80" />
         <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
           <div className="flex items-center justify-between gap-2">
             <Link href={href("/")} className="flex items-center gap-2">
@@ -101,7 +104,7 @@ export function Feed() {
           </AreaButton>
           {AREAS.map((a) => (
             <AreaButton key={a} label={t.area[a]} selected={feed.area === a} onClick={() => setFeed({ area: feed.area === a ? "" : a })}>
-              <Scene area={a} className="h-full w-full" />
+              <Photo area={a} sizes="64px" />
             </AreaButton>
           ))}
         </div>
@@ -157,7 +160,7 @@ function AreaButton({
   return (
     <button type="button" onClick={onClick} aria-pressed={selected} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
       <span
-        className={`block h-16 w-16 overflow-hidden rounded-full ring-offset-2 ring-offset-mist transition ${
+        className={`relative block h-16 w-16 overflow-hidden rounded-full ring-offset-2 ring-offset-mist transition ${
           selected ? "ring-[3px] ring-sky" : "ring-1 ring-line"
         }`}
       >

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Check, Lock, MessageCircle, Pencil, PartyPopper, RotateCcw, Trash2, X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { PaymentPanel } from "./Payment";
-import { Scene } from "./Scene";
+import { Photo } from "./Photo";
 import { FlightLine, KindBadge } from "./TripBits";
 import { ProfileFacts } from "./TripView";
 import { Body, Empty, PageHeader, PointsPill, SegTabs, Sheet, primaryButton } from "./ui";
@@ -67,7 +67,7 @@ function PostedTrip({ trip }: { trip: Trip }) {
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-16px_rgba(11,29,77,0.35)]">
       <Link href={href(`/trips/${trip.id}`)} className="relative block h-28">
-        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
+        <Photo area={trip.area} photo={trip.photo} seed={trip.id} sizes="(max-width: 448px) 92vw, 416px" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/30 to-transparent" />
         <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
           <KindBadge kind={trip.kind} onDark />
@@ -267,8 +267,8 @@ function Sent() {
         return (
           <li key={r.id} className="overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-16px_rgba(11,29,77,0.35)]">
             <Link href={href(`/trips/${trip.id}`)} className="flex items-center gap-3 p-3">
-              <span className="block h-16 w-16 shrink-0 overflow-hidden rounded-2xl">
-                <Scene area={trip.area} className="h-full w-full" />
+              <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-2xl">
+                <Photo area={trip.area} photo={trip.photo} seed={trip.id} sizes="64px" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
