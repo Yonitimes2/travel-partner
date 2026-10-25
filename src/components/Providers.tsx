@@ -13,6 +13,9 @@ interface LangValue {
   href: (path: string) => string;
 }
 
+/** how often the app asks the server for news (a chat asks more often while it's open) */
+const POLL_MS = 10_000;
+
 const LangContext = createContext<LangValue | null>(null);
 const ToastContext = createContext<(message: string) => void>(() => {});
 
@@ -35,10 +38,6 @@ export function Providers({ lang, children }: { lang: Lang; children: React.Reac
     [lang],
   );
 
-  useEffect(() => {
-    useApp.getState().init();
-  }, []);
-
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const showToast = useCallback((message: string) => {
@@ -46,6 +45,25 @@ export function Providers({ lang, children }: { lang: Lang; children: React.Reac
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setToast(null), 2600);
   }, []);
+
+  // the data comes from the server: once now, then every few seconds while the app is in view
+  useEffect(() => {
+    const { init, refresh } = useApp.getState();
+    init();
+    const tick = setInterval(() => document.visibilityState === "visible" && refresh(), POLL_MS);
+    const onShow = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      clearInterval(tick);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, []);
+
+  // a change the server refused
+  const error = useApp((s) => s.error);
+  useEffect(() => {
+    if (error) showToast(value.t.errors[error.code as keyof Dict["errors"]] ?? value.t.errors.unknown);
+  }, [error, showToast, value.t]);
 
   return (
     <LangContext.Provider value={value}>

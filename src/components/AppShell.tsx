@@ -2,21 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { Compass, FlaskConical, Luggage, MessageCircle, Plus, UserRound } from "lucide-react";
-import { useT, useToast } from "./Providers";
+import { useT } from "./Providers";
 import { DEMO_MAN, DEMO_WOMAN } from "@/lib/seed";
-import { findUser, useApp } from "@/lib/store";
-import type { Gender } from "@/lib/types";
+import { useApp } from "@/lib/store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const users = useApp((s) => s.users);
-  const meId = useApp((s) => s.meId);
-  const me = findUser(users, meId);
-
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip bg-mist md:my-4 md:min-h-[calc(100dvh-2rem)] md:rounded-[32px] md:shadow-2xl md:ring-1 md:ring-black/5">
-      <DemoStrip gender={me?.status === "active" ? me.gender : undefined} />
+      {process.env.NODE_ENV === "development" && <DevStrip />}
       <main className="flex-1 pb-32">{children}</main>
       <Suspense fallback={<BottomNav active={null} />}>
         <LiveBottomNav />
@@ -25,10 +20,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** pages render inside this: the sample data only exists in the browser, so the server sends placeholders */
+/** pages render inside this: the data comes from the server after the page loads; signed-out people go to /welcome */
 export function Gate({ children, allowPending = false }: { children: React.ReactNode; allowPending?: boolean }) {
+  const { href } = useT();
+  const router = useRouter();
   const ready = useApp((s) => s.ready);
+  const signedIn = useApp((s) => s.signedIn);
   const me = useApp((s) => s.users.find((u) => u.id === s.meId));
+  useEffect(() => {
+    if (ready && !signedIn) router.replace(href("/welcome"));
+  }, [ready, signedIn, router, href]);
   if (!ready || !me) return <Loading />;
   if (me.status !== "active" && !allowPending) return <NotActive suspended={me.status === "suspended"} />;
   return children;
@@ -49,43 +50,46 @@ function NotActive({ suspended }: { suspended: boolean }) {
   );
 }
 
-function DemoStrip({ gender }: { gender?: Gender }) {
-  const { t, href } = useT();
-  const toast = useToast();
+/**
+ * Development only (`next dev`): sign in as the sample man or woman (each runs their own section),
+ * and refill the database with the sample data.
+ */
+function DevStrip() {
+  const { href } = useT();
   const router = useRouter();
-  const viewAs = useApp((s) => s.viewAs);
+  const meId = useApp((s) => s.meId);
+  const refresh = useApp((s) => s.refresh);
 
-  const pick = (g: Gender) => {
-    if (g === gender) return;
-    // go to the trips list first, so the page being left doesn't redraw as the other person
+  const post = async (url: string, body?: object) => {
+    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
     router.push(href("/"));
-    viewAs(g === "male" ? DEMO_MAN : DEMO_WOMAN);
-    toast(t.section[g]);
+    await refresh();
   };
+
+  const button = (label: string, on: boolean, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-full px-2.5 py-0.5 font-medium transition ${on ? "bg-amber-500 text-white" : "text-amber-900 hover:bg-amber-100"}`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="flex items-center justify-between gap-2 border-b border-dashed border-amber-300 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 md:rounded-t-[32px]">
       <span className="flex items-center gap-1.5">
         <FlaskConical size={14} aria-hidden />
-        {t.demo.banner}
+        dev
       </span>
-      <span className="flex items-center gap-1.5">
-        <span className="hidden min-[380px]:inline">{t.demo.viewAs}</span>
-        <span className="flex rounded-full bg-white p-0.5 ring-1 ring-amber-200">
-          {(["male", "female"] as const).map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => pick(g)}
-              aria-pressed={gender === g}
-              className={`rounded-full px-2.5 py-0.5 font-medium transition ${
-                gender === g ? "bg-amber-500 text-white" : "text-amber-900 hover:bg-amber-100"
-              }`}
-            >
-              {t.gender[g]}
-            </button>
-          ))}
-        </span>
+      <span className="flex rounded-full bg-white p-0.5 ring-1 ring-amber-200">
+        {button("גבר", meId === DEMO_MAN, () => post("/api/dev/login", { userId: DEMO_MAN }))}
+        {button("אישה", meId === DEMO_WOMAN, () => post("/api/dev/login", { userId: DEMO_WOMAN }))}
+        {button("נתוני דוגמה", false, () => post("/api/dev/seed"))}
+        <a href="/api/dev/outbox" target="_blank" className="rounded-full px-2.5 py-0.5 font-medium hover:bg-amber-100">
+          מיילים
+        </a>
       </span>
     </div>
   );

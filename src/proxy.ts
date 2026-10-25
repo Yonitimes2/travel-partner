@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-/** every page lives under /he or /en; anything else goes to the Hebrew version of the same path */
+/**
+ * Every page lives under /he or /en; anything else goes to the Hebrew version of the same path.
+ * The API (/api/…) is left alone: each route checks who is signed in itself.
+ */
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (/^\/(he|en)(\/|$)/.test(pathname)) return NextResponse.next();
@@ -11,5 +14,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon\\.ico).*)"],
+  matcher: ["/((?!_next/|api/|favicon\\.ico).*)"],
 };
