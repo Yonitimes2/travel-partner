@@ -36,8 +36,8 @@ try {
     );
   }
   // who recommended whom, once everyone exists
-  for (const u of users.filter((u) => u.referredBy)) {
-    await db.execute("UPDATE users SET referred_by = ? WHERE id = ?", [u.referredBy, u.id]);
+  for (const u of users) {
+    if (u.referredBy) await db.execute("UPDATE users SET referred_by = ? WHERE id = ?", [u.referredBy, u.id]);
   }
 
   for (const t of trips) {

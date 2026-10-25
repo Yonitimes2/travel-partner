@@ -1,11 +1,11 @@
 import { addDays } from "./dates";
+import { DEMO_MAN, DEMO_WOMAN } from "./seed-ids";
+import { moreSeed } from "./seed-more";
 import type { Block, JoinRequest, Message, Party, Report, Trip, User } from "./types";
 
 const SOLO: Party = { type: "solo" };
 
-/** the two people you can "be" in the prototype: one per section */
-export const DEMO_MAN = "u-me-m";
-export const DEMO_WOMAN = "u-me-f";
+export { DEMO_MAN, DEMO_WOMAN };
 
 export interface SeedData {
   users: User[];
@@ -168,5 +168,14 @@ export function makeSeed(today: string, now: Date): SeedData {
     { id: "rep-1", fromUserId: "u-ruti", aboutUserId: "u-shira", reason: "spam", text: "שלחה את אותה הודעה לכמה טיולים", status: "open", createdAt: ago(20) },
   ];
 
-  return { users, trips, requests, messages, reports, blocks: [] };
+  // and five times as much of the same, so the prototype feels lived in (seed-more.ts)
+  const more = moreSeed(d, ago);
+  return {
+    users: [...users, ...more.users],
+    trips: [...trips, ...more.trips],
+    requests: [...requests, ...more.requests],
+    messages: [...messages, ...more.messages],
+    reports: [...reports, ...more.reports],
+    blocks: [],
+  };
 }

@@ -191,8 +191,8 @@ export const useApp = create<AppState>()(
       reset: () => set({ ...makeSeed(todayISO(), new Date()), meId: DEMO_MAN }),
     }),
     {
-      // v5: who travels with whom, full names and phones for recommendations
-      name: "travel-partner-demo-v5",
+      // v6: five times the sample content
+      name: "travel-partner-demo-v6",
       skipHydration: true,
       partialize: ({ users, trips, requests, messages, reports, blocks, meId }) => ({
         users,

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // other sessions' working copies (git worktrees) live here; each lints its own
+    ".claude/**",
   ]),
 ]);
 
