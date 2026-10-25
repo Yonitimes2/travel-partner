@@ -102,7 +102,9 @@ export const useApp = create<AppState>()(
 
       updateTrip: (id, trip) => set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, ...trip } : t)) })),
 
-      closeTrip: (id) => set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, kind: "closed" } : t)) })),
+      // a closed trip's dates are final: the first option stays
+      closeTrip: (id) =>
+        set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, kind: "closed", flex: undefined } : t)) })),
 
       setTripStatus: (id, status) => set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, status } : t)) })),
 
@@ -177,8 +179,8 @@ export const useApp = create<AppState>()(
       reset: () => set({ ...makeSeed(todayISO(), new Date()), meId: DEMO_MAN }),
     }),
     {
-      // v3: trip cover photos
-      name: "travel-partner-demo-v3",
+      // v4: date options on planned trips
+      name: "travel-partner-demo-v4",
       skipHydration: true,
       partialize: ({ users, trips, requests, messages, reports, blocks, meId }) => ({
         users,

@@ -10,7 +10,7 @@ import { Photo } from "./Photo";
 import { FlightLine, KindBadge, StyleChips } from "./TripBits";
 import { BackButton, Card, PointsPill, Sheet, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
-import { daysBetween, deadlineOf, formatDay, isOpen } from "@/lib/dates";
+import { daysBetween, deadlineOf, flexOf, formatDay, isOpen } from "@/lib/dates";
 import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Trip, User } from "@/lib/types";
@@ -52,7 +52,7 @@ export function TripView({ id }: { id: string }) {
   }
 
   const mine = trip.ownerId === meId;
-  const toGo = Math.max(0, daysBetween(today, trip.startDate));
+  const countdown = t.countdown(Math.max(0, daysBetween(today, trip.startDate)));
   const stats = statsOf(owner, trips, requests);
 
   return (
@@ -86,28 +86,30 @@ export function TripView({ id }: { id: string }) {
       </section>
 
       <div className="relative -mt-10 space-y-3 px-4">
-        {/* the countdown and the boarding-pass dates */}
+        {/* the countdown, then the boarding-pass dates on a row of their own */}
         <div className="overflow-hidden rounded-3xl bg-white shadow-[0_14px_36px_-16px_rgba(11,29,77,0.45)]">
           <div className="flex items-center gap-4 px-4 py-4">
-            <div className="text-center">
-              <div className="digits text-5xl font-extrabold leading-none text-navy">{toGo}</div>
-              <div className="mt-1 text-xs font-semibold text-muted">{t.trip.daysToGo}</div>
+            <div className="w-24 shrink-0 text-center">
+              <div className="digits text-5xl font-extrabold leading-none text-navy">{countdown.n}</div>
+              <div className="mt-1 text-xs font-semibold leading-snug text-muted">
+                {countdown.label} {flexOf(trip) ? t.trip.toGoAbout : t.trip.toGo}
+              </div>
             </div>
-            <div className="h-14 w-px bg-line" />
-            <div className="min-w-0 flex-1">
-              <FlightLine trip={trip} />
+            <div className="h-16 w-px bg-line" />
+            <div className="min-w-0 flex-1 space-y-2 text-sm">
+              <p className="flex items-center gap-1.5 font-semibold text-navy">
+                <Users size={16} className="shrink-0" aria-hidden />
+                {t.wanted[owner.gender][trip.wanted]}
+              </p>
+              <p className="flex items-start gap-1.5 text-muted">
+                <Hourglass size={15} className="mt-0.5 shrink-0" aria-hidden />
+                {trip.status === "full" ? t.trip.full : t.trip.openUntil(formatDay(deadlineOf(trip), lang))}
+              </p>
             </div>
           </div>
           <div className="perforation" />
-          <div className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-navy">
-              <Users size={16} aria-hidden />
-              {t.wanted[owner.gender][trip.wanted]}
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-muted">
-              <Hourglass size={15} aria-hidden />
-              {trip.status === "full" ? t.trip.full : t.trip.openUntil(formatDay(deadlineOf(trip), lang))}
-            </span>
+          <div className="px-4 py-3.5">
+            <FlightLine trip={trip} />
           </div>
         </div>
 

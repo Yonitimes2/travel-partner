@@ -6,7 +6,7 @@ import { Avatar } from "./Avatar";
 import { Photo } from "./Photo";
 import { PointsPill } from "./ui";
 import { useT } from "./Providers";
-import { daysBetween, deadlineOf, formatDay } from "@/lib/dates";
+import { altEndDate, daysBetween, deadlineOf, flexOf, formatDay } from "@/lib/dates";
 import type { Trip, TripKind, User } from "@/lib/types";
 
 export function KindBadge({ kind, onDark = false }: { kind: TripKind; onDark?: boolean }) {
@@ -42,15 +42,21 @@ export function StyleChips({ trip, max }: { trip: Trip; max?: number }) {
   );
 }
 
-/** depart ✈ return, the way a boarding pass shows it */
-export function FlightLine({ trip }: { trip: Trip }) {
+/** depart ✈ return, the way a boarding pass shows it; a planned trip's other date or range shows under each date */
+export function FlightLine({ trip }: { trip: Pick<Trip, "startDate" | "endDate" | "kind" | "flex"> }) {
   const { t, lang } = useT();
   const days = daysBetween(trip.startDate, trip.endDate) + 1;
+  const flex = flexOf(trip);
+  const option = (date: string) =>
+    flex?.type === "alt" ? t.trip.or(formatDay(date, lang)) : flex?.type === "range" ? t.trip.plusMinus(flex.days) : null;
+  const altStart = flex?.type === "alt" ? flex.startDate : trip.startDate;
+
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
       <div>
         <div className="text-[11px] font-medium text-muted">{t.trip.depart}</div>
         <div className="whitespace-nowrap text-lg font-bold text-ink">{formatDay(trip.startDate, lang)}</div>
+        {flex && <div className="whitespace-nowrap text-xs font-semibold text-sky">{option(altStart)}</div>}
       </div>
       <div className="flex min-w-14 flex-col items-center text-sky">
         <div className="flex w-full items-center gap-1">
@@ -58,11 +64,17 @@ export function FlightLine({ trip }: { trip: Trip }) {
           <Plane size={18} className="rotate-45 rtl:-rotate-[135deg]" aria-hidden />
           <span className="h-px flex-1 border-t-2 border-dotted border-sky/40" />
         </div>
-        <span className="mt-0.5 text-[11px] font-semibold text-muted">{t.trip.days(days)}</span>
+        <span className="mt-0.5 whitespace-nowrap text-[11px] font-semibold text-muted">{t.duration(days)}</span>
+        {flex && (
+          <span className="mt-1 whitespace-nowrap rounded-full bg-sky-soft px-2 py-0.5 text-[10px] font-bold text-sky">
+            {flex.type === "alt" ? t.trip.notFinal : t.trip.flexible}
+          </span>
+        )}
       </div>
       <div className="text-end">
         <div className="text-[11px] font-medium text-muted">{t.trip.return}</div>
         <div className="whitespace-nowrap text-lg font-bold text-ink">{formatDay(trip.endDate, lang)}</div>
+        {flex && <div className="whitespace-nowrap text-xs font-semibold text-sky">{option(altEndDate(trip, altStart))}</div>}
       </div>
     </div>
   );

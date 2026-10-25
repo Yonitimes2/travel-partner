@@ -7,7 +7,7 @@ import { Photo } from "./Photo";
 import { TripCard } from "./TripBits";
 import { LangToggle, PointsPill, SegTabs } from "./ui";
 import { useT } from "./Providers";
-import { formatMonth, isOpen, monthKey } from "@/lib/dates";
+import { formatMonth, isOpen, monthsOf } from "@/lib/dates";
 import { PHOTOS, photosOf } from "@/lib/photos";
 import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
@@ -35,12 +35,12 @@ export function Feed() {
   );
 
   const ofKind = section.filter((tr) => tr.kind === feed.kind);
-  const months = [...new Set(ofKind.map((tr) => monthKey(tr.startDate)))].sort();
+  const months = [...new Set(ofKind.flatMap(monthsOf))].sort();
   const shown = ofKind.filter(
     (tr) =>
       (!feed.area || tr.area === feed.area) &&
       (!feed.wanted || tr.wanted === feed.wanted) &&
-      (!feed.month || monthKey(tr.startDate) === feed.month),
+      (!feed.month || monthsOf(tr).includes(feed.month)),
   );
   const filtered = Boolean(feed.area || feed.wanted || feed.month);
   const countOf = (kind: TripKind) => section.filter((tr) => tr.kind === kind).length;

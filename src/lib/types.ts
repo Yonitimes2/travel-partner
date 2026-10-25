@@ -49,6 +49,15 @@ export type Pace = "easy" | "medium" | "hard";
 /** pending: signed up and waiting for the recommender and the section's admin */
 export type UserStatus = "pending" | "active" | "suspended";
 
+/**
+ * How settled a planned trip's dates are: only these dates, a second departure date, or flexible by some days.
+ * A closed trip's dates are final.
+ */
+export type DateFlex =
+  | { type: "fixed" }
+  | { type: "alt"; startDate: string }
+  | { type: "range"; days: number };
+
 /** until when the poster is looking for partners: a fixed date, or a number of days before the trip */
 export type Deadline = { type: "date"; date: string } | { type: "daysBefore"; days: number };
 
@@ -99,6 +108,8 @@ export interface Trip {
   /** yyyy-mm-dd */
   startDate: string;
   endDate: string;
+  /** planned trips only; missing means the dates are fixed */
+  flex?: DateFlex;
   wanted: Wanted;
   styles: TripStyle[];
   description: string;

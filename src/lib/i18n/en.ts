@@ -1,7 +1,24 @@
 import type { Dict } from "./he";
+import { durationParts, type DurationUnit } from "../dates";
+
+const unitText = (unit: DurationUnit, n: number) =>
+  `${n} ${unit === "days" ? (n === 1 ? "day" : "days") : unit === "weeks" ? (n === 1 ? "week" : "weeks") : n === 1 ? "month" : "months"}`;
+
+/** "2 weeks and 1 day", "1 month and 2 weeks" */
+const duration = (days: number) =>
+  durationParts(days)
+    .map((p) => unitText(p.unit, p.n))
+    .join(" and ");
 
 export const en: Dict = {
   appName: "Travel Partner",
+
+  duration,
+  countdown: (days) => {
+    const [first, ...rest] = durationParts(days);
+    const word = unitText(first.unit, first.n).replace(/^\d+ /, "");
+    return { n: first.n, label: [word, ...rest.map((p) => unitText(p.unit, p.n))].join(" and ") };
+  },
   tagline: "Going on a trip? Find partners for the road",
 
   greeting: {
@@ -139,11 +156,15 @@ export const en: Dict = {
   trip: {
     depart: "Depart",
     return: "Return",
-    days: (n) => (n === 1 ? "1 day" : `${n} days`),
-    daysToGo: "days to go",
+    toGo: "to go",
+    toGoAbout: "to go, roughly",
     openUntil: (date) => `Open to join until ${date}`,
-    closesIn: (n) => (n <= 0 ? "closes today" : n === 1 ? "closes tomorrow" : `${n} days left`),
-    daysBefore: (n) => `Until ${n} days before departure`,
+    closesIn: (n) => (n <= 0 ? "closes today" : n === 1 ? "closes tomorrow" : `${duration(n)} left`),
+    daysBefore: (n) => `Until ${duration(n)} before departure`,
+    or: (date) => `or ${date}`,
+    plusMinus: (days) => `± ${duration(days)}`,
+    notFinal: "Dates not final",
+    flexible: "Flexible dates",
     about: "About the trip",
     lookingFor: "Looking for",
     style: "Style",
@@ -196,6 +217,16 @@ export const en: Dict = {
     cover: "Cover photo",
     from: "Depart",
     to: "Return",
+    flexTitle: "How settled are the dates?",
+    flex: {
+      fixed: "Only these dates",
+      alt: "Another departure date",
+      range: "Flexible by days or weeks",
+    },
+    altDate: "Another departure date",
+    altReturn: (date) => `returning ${date}`,
+    rangeLabel: "Flexible by, earlier or later",
+    unit: { days: "days", weeks: "weeks" },
     wanted: "Who are you looking for?",
     familiesNote: "Family trips show in the men's section and the women's section",
     styles: "Trip style (pick any)",
@@ -218,6 +249,7 @@ export const en: Dict = {
       order: "The return date is before the departure date",
       past: "The departure date has already passed",
       deadline: "The deadline must be between today and departure",
+      alt: "Pick another departure date — different from the first, and not in the past",
     },
   },
 

@@ -60,13 +60,13 @@ export function makeSeed(today: string, now: Date): SeedData {
       deadline: { type: "daysBefore", days: 10 }, createdAt: ago(30),
     }),
     trip({
-      id: "t-ramon", photo: "south-ramon", ownerId: "u-moshe", kind: "planned", area: "south", place: "מכתש רמון והערבה",
+      id: "t-ramon", photo: "south-ramon", flex: { type: "range", days: 14 }, ownerId: "u-moshe", kind: "planned", area: "south", place: "מכתש רמון והערבה",
       startDate: d(12), endDate: d(14), wanted: "families", styles: ["nature", "adventure"],
       description: "רעיון לסוף שבוע ארוך עם הילדים, טיול ג'יפים במכתש. אם יהיו עוד 2 משפחות — סוגרים מדריך ולינה בחאן.",
       deadline: { type: "date", date: d(6) }, createdAt: ago(50),
     }),
     trip({
-      id: "t-vietnam", photo: "asia-halong", ownerId: "u-daniel", kind: "planned", area: "asia", place: "צפון וייטנאם",
+      id: "t-vietnam", photo: "asia-halong", flex: { type: "range", days: 7 }, ownerId: "u-daniel", kind: "planned", area: "asia", place: "צפון וייטנאם",
       startDate: d(60), endDate: d(74), wanted: "one", styles: ["adventure", "cities", "food"],
       description: "שבועיים בצפון וייטנאם — סאפה ומפרץ הא לונג. אוכל כשר מבית חב״ד. מחפש שותף אחד בקצב דומה.",
       deadline: { type: "daysBefore", days: 21 }, createdAt: ago(8),
@@ -78,7 +78,7 @@ export function makeSeed(today: string, now: Date): SeedData {
       deadline: { type: "daysBefore", days: 2 }, createdAt: ago(70),
     }),
     trip({
-      id: "t-prague", photo: "europe-prague", ownerId: "u-yehuda", kind: "planned", area: "europe", place: "פראג ווינה",
+      id: "t-prague", photo: "europe-prague", flex: { type: "alt", startDate: d(54) }, ownerId: "u-yehuda", kind: "planned", area: "europe", place: "פראג ווינה",
       startDate: d(40), endDate: d(46), wanted: "few", styles: ["cities", "food", "shabbat"],
       description: "סיור ערים, בתי כנסת עתיקים ומסעדות כשרות. שבת בפראג ליד בית הכנסת אלטנוי.",
       deadline: { type: "date", date: d(25) }, createdAt: ago(20),
@@ -91,7 +91,7 @@ export function makeSeed(today: string, now: Date): SeedData {
     }),
     // the demo man's own trips: one planned (requests he can't accept yet), one closed (with a chat)
     trip({
-      id: "t-amud", photo: "north-kinneret", ownerId: DEMO_MAN, kind: "planned", area: "north", place: "נחל עמוד ומירון",
+      id: "t-amud", photo: "north-kinneret", flex: { type: "fixed" }, ownerId: DEMO_MAN, kind: "planned", area: "north", place: "נחל עמוד ומירון",
       startDate: d(18), endDate: d(19), wanted: "few", styles: ["hiking", "nature"],
       description: "יום וחצי של הליכה עם לינה בחניון לילה. מחפש 2–3 חבר'ה שאוהבים לקום מוקדם.",
       deadline: { type: "daysBefore", days: 5 }, createdAt: ago(40),
@@ -111,13 +111,13 @@ export function makeSeed(today: string, now: Date): SeedData {
       deadline: { type: "daysBefore", days: 14 }, createdAt: ago(26),
     }),
     trip({
-      id: "t-apollonia", photo: "center-caesarea", ownerId: "u-noa", kind: "planned", area: "center", place: "אפולוניה וחוף נפרד בהרצליה",
+      id: "t-apollonia", photo: "center-caesarea", flex: { type: "alt", startDate: d(16) }, ownerId: "u-noa", kind: "planned", area: "center", place: "אפולוניה וחוף נפרד בהרצליה",
       startDate: d(9), endDate: d(9), wanted: "families", styles: ["relaxed", "nature"],
       description: "רעיון ליום משפחות עם הילדים. אם יהיו עוד 2–3 משפחות נארגן הסעה משותפת.",
       deadline: { type: "date", date: d(5) }, createdAt: ago(12),
     }),
     trip({
-      id: "t-kinneret", photo: "north-kinneret", ownerId: "u-ayala", kind: "planned", area: "north", place: "סובב כנרת באופניים",
+      id: "t-kinneret", photo: "north-kinneret", flex: { type: "range", days: 3 }, ownerId: "u-ayala", kind: "planned", area: "north", place: "סובב כנרת באופניים",
       startDate: d(15), endDate: d(16), wanted: "one", styles: ["adventure", "nature"],
       description: "רכיבה של יומיים סביב הכנרת עם לינה בטבריה. מחפשת שותפה אחת שרוכבת באופן קבוע.",
       deadline: { type: "daysBefore", days: 4 }, createdAt: ago(60),

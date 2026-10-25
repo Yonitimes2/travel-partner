@@ -12,10 +12,37 @@ import type {
   Wanted,
 } from "../types";
 import type { Tier } from "../rules";
+import { durationParts, type DurationUnit } from "../dates";
+
+/** "יום", "יומיים", "3 ימים"; "שבוע", "שבועיים"; "חודש", "חודשיים" */
+const unitText = (unit: DurationUnit, n: number) =>
+  unit === "days"
+    ? n === 1 ? "יום" : n === 2 ? "יומיים" : `${n} ימים`
+    : unit === "weeks"
+      ? n === 1 ? "שבוע" : n === 2 ? "שבועיים" : `${n} שבועות`
+      : n === 1 ? "חודש" : n === 2 ? "חודשיים" : `${n} חודשים`;
+
+/** "ושבוע", but "ו־3 ימים" before a number */
+const and = (text: string) => (/^\d/.test(text) ? `ו־${text}` : `ו${text}`);
+
+/** "שבועיים ויום", "חודש ושבועיים", "8 ימים" */
+const duration = (days: number) => {
+  const parts = durationParts(days);
+  if (parts.length === 1 && parts[0].unit === "days" && parts[0].n === 1) return "יום אחד";
+  return parts.map((p, i) => (i ? and(unitText(p.unit, p.n)) : unitText(p.unit, p.n))).join(" ");
+};
 
 /** Hebrew is the source dictionary: English must have the same shape (see en.ts) */
 export const he = {
   appName: "שותף לדרך",
+
+  duration,
+  /** for the big countdown: the number, and the words that go under it ("חודשים ושבוע") */
+  countdown: (days: number) => {
+    const [first, ...rest] = durationParts(days);
+    const word = { days: first.n === 1 ? "יום" : "ימים", weeks: first.n === 1 ? "שבוע" : "שבועות", months: first.n === 1 ? "חודש" : "חודשים" }[first.unit];
+    return { n: first.n, label: [word, ...rest.map((p) => and(unitText(p.unit, p.n)))].join(" ") };
+  },
   tagline: "יוצאים לטיול? מוצאים שותפים לדרך",
 
   greeting: {
@@ -155,11 +182,15 @@ export const he = {
   trip: {
     depart: "יציאה",
     return: "חזרה",
-    days: (n: number) => (n === 1 ? "יום אחד" : `${n} ימים`),
-    daysToGo: "ימים ליציאה",
+    toGo: "ליציאה",
+    toGoAbout: "ליציאה, בערך",
     openUntil: (date: string) => `פתוח להצטרפות עד ${date}`,
-    closesIn: (n: number) => (n <= 0 ? "נסגר היום" : n === 1 ? "נסגר מחר" : `עוד ${n} ימים`),
-    daysBefore: (n: number) => `עד ${n} ימים לפני היציאה`,
+    closesIn: (n: number) => (n <= 0 ? "נסגר היום" : n === 1 ? "נסגר מחר" : `עוד ${duration(n)}`),
+    daysBefore: (n: number) => `עד ${duration(n)} לפני היציאה`,
+    or: (date: string) => `או ${date}`,
+    plusMinus: (days: number) => `± ${duration(days)}`,
+    notFinal: "תאריכים לא סופיים",
+    flexible: "תאריכים גמישים",
     about: "על הטיול",
     lookingFor: "מחפשים",
     style: "סגנון",
@@ -212,6 +243,16 @@ export const he = {
     cover: "תמונת כיסוי",
     from: "יציאה",
     to: "חזרה",
+    flexTitle: "עד כמה התאריכים סגורים?",
+    flex: {
+      fixed: "רק התאריכים האלה",
+      alt: "יש תאריך יציאה נוסף",
+      range: "גמיש בכמה ימים או שבועות",
+    },
+    altDate: "תאריך יציאה נוסף",
+    altReturn: (date: string) => `וחזרה ב־${date}`,
+    rangeLabel: "גמיש בטווח של, לפני או אחרי",
+    unit: { days: "ימים", weeks: "שבועות" },
     wanted: "את מי מחפשים?",
     familiesNote: "טיול משפחות מופיע במדור הגברים ובמדור הנשים",
     styles: "סגנון הטיול (אפשר לבחור כמה)",
@@ -234,6 +275,7 @@ export const he = {
       order: "תאריך החזרה לפני תאריך היציאה",
       past: "תאריך היציאה כבר עבר",
       deadline: "המועד האחרון צריך להיות מהיום ועד היציאה",
+      alt: "צריך תאריך יציאה נוסף — שונה מהראשון, ולא בעבר",
     },
   },
 

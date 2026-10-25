@@ -8,20 +8,20 @@ import { Body, Chip, Field, PageHeader, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
 import { AREAS } from "./Feed";
 import { Photo } from "./Photo";
-import { addDays, daysBetween } from "@/lib/dates";
+import { addDays, altEndDate, daysBetween, formatDay } from "@/lib/dates";
 import { photosOf } from "@/lib/photos";
 import { BETA, PLANNED_LIMIT, TRIP_FEE, activePlanned } from "@/lib/rules";
 import { findUser, useApp, type TripInput } from "@/lib/store";
-import type { Area, Deadline, PhotoId, Trip, TripKind, TripStyle, Wanted } from "@/lib/types";
+import type { Area, DateFlex, Deadline, PhotoId, Trip, TripKind, TripStyle, Wanted } from "@/lib/types";
 
 const WANTED: Wanted[] = ["one", "few", "families"];
 const STYLES: TripStyle[] = ["hiking", "nature", "cities", "relaxed", "adventure", "shabbat", "food"];
 
-type Errors = Partial<Record<"place" | "area" | "dates" | "deadline", string>>;
+type Errors = Partial<Record<"place" | "area" | "dates" | "alt" | "deadline", string>>;
 
 /** posting a trip, or editing one (`trip`) */
 export function TripForm({ trip }: { trip?: Trip }) {
-  const { t, href } = useT();
+  const { t, lang, href } = useT();
   const toast = useToast();
   const router = useRouter();
   const { users, trips, meId, today, createTrip, updateTrip } = useApp();
@@ -37,6 +37,12 @@ export function TripForm({ trip }: { trip?: Trip }) {
   const [photo, setPhoto] = useState<PhotoId | undefined>(trip?.photo);
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
+  // how settled a planned trip's dates are (a range is entered in days or weeks, kept in days)
+  const [flexType, setFlexType] = useState<DateFlex["type"]>(trip?.flex?.type ?? "fixed");
+  const [altStart, setAltStart] = useState(trip?.flex?.type === "alt" ? trip.flex.startDate : "");
+  const initialRange = trip?.flex?.type === "range" ? trip.flex.days : 3;
+  const [rangeUnit, setRangeUnit] = useState<"days" | "weeks">(initialRange % 7 === 0 ? "weeks" : "days");
+  const [rangeAmount, setRangeAmount] = useState(initialRange % 7 === 0 ? initialRange / 7 : initialRange);
   const [wanted, setWanted] = useState<Wanted>(trip?.wanted ?? "few");
   const [styles, setStyles] = useState<TripStyle[]>(trip?.styles ?? []);
   const [description, setDescription] = useState(trip?.description ?? "");
@@ -56,10 +62,24 @@ export function TripForm({ trip }: { trip?: Trip }) {
     else if (endDate < startDate) e.dates = t.newTrip.errors.order;
     else if (startDate < today) e.dates = t.newTrip.errors.past;
 
+    // only a planned trip has date options; a closed trip's dates are final
+    const flex: DateFlex | undefined =
+      kind !== "planned"
+        ? undefined
+        : flexType === "alt"
+          ? { type: "alt", startDate: altStart }
+          : flexType === "range"
+            ? { type: "range", days: rangeAmount * (rangeUnit === "weeks" ? 7 : 1) }
+            : { type: "fixed" };
+    if (flex?.type === "alt" && (!altStart || altStart < today || altStart === startDate)) e.alt = t.newTrip.errors.alt;
+
     const deadline: Deadline = deadlineType === "date" ? { type: "date", date: deadlineDate } : { type: "daysBefore", days: daysBefore };
-    if (!e.dates) {
-      const last = deadline.type === "date" ? deadline.date : addDays(startDate, -deadline.days);
-      if (!last || last < today || last > startDate) e.deadline = t.newTrip.errors.deadline;
+    if (!e.dates && !e.alt) {
+      // the deadline must come before the earliest possible departure
+      const earliest =
+        flex?.type === "alt" && altStart < startDate ? altStart : flex?.type === "range" ? addDays(startDate, -flex.days) : startDate;
+      const last = deadline.type === "date" ? deadline.date : addDays(earliest, -deadline.days);
+      if (!last || last < today || last > earliest) e.deadline = t.newTrip.errors.deadline;
     }
 
     setErrors(e);
@@ -68,7 +88,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
       requestAnimationFrame(() => document.querySelector("[data-error]")?.scrollIntoView({ block: "center", behavior: "smooth" }));
       return null;
     }
-    return { kind, place: place.trim(), area: area as Area, photo: photo ?? photosOf(area as Area)[0], startDate, endDate, wanted, styles, description: description.trim(), deadline };
+    return { kind, place: place.trim(), area: area as Area, photo: photo ?? photosOf(area as Area)[0], startDate, endDate, flex, wanted, styles, description: description.trim(), deadline };
   };
 
   const save = (input: TripInput) => {
@@ -207,9 +227,61 @@ export function TripForm({ trip }: { trip?: Trip }) {
                   {errors.dates}
                 </p>
               ) : (
-                tripDays > 0 && <p className="mt-1 text-sm font-medium text-sky">{t.trip.days(tripDays)}</p>
+                tripDays > 0 && <p className="mt-1 text-sm font-medium text-sky">{t.duration(tripDays)}</p>
               )}
             </div>
+
+            {kind === "planned" && (
+              <fieldset className="rounded-3xl bg-white p-4 ring-1 ring-line">
+                <legend className="sr-only">{t.newTrip.flexTitle}</legend>
+                <p aria-hidden className="mb-2.5 text-sm font-semibold text-ink">
+                  {t.newTrip.flexTitle}
+                </p>
+                <div className="grid gap-2">
+                  {(["fixed", "alt", "range"] as const).map((f) => (
+                    <Chip key={f} selected={flexType === f} onClick={() => setFlexType(f)}>
+                      {t.newTrip.flex[f]}
+                    </Chip>
+                  ))}
+                </div>
+
+                {flexType === "alt" && (
+                  <div className="mt-3">
+                    <Field label={t.newTrip.altDate} error={errors.alt} htmlFor="alt">
+                      <input id="alt" type="date" min={today} value={altStart} onChange={(e) => setAltStart(e.target.value)} className={inputClass} />
+                    </Field>
+                    {altStart && tripDays > 0 && !errors.alt && (
+                      <p className="mt-1 text-sm text-muted">{t.newTrip.altReturn(formatDay(altEndDate({ startDate, endDate }, altStart), lang))}</p>
+                    )}
+                  </div>
+                )}
+
+                {flexType === "range" && (
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-sm font-semibold text-ink">{t.newTrip.rangeLabel}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-sky">±</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        aria-label={t.newTrip.rangeLabel}
+                        min={1}
+                        max={rangeUnit === "weeks" ? 8 : 30}
+                        value={rangeAmount}
+                        onChange={(e) => setRangeAmount(Math.max(1, Math.min(rangeUnit === "weeks" ? 8 : 30, Number(e.target.value) || 1)))}
+                        className={`${inputClass} w-20 text-center`}
+                      />
+                      {(["days", "weeks"] as const).map((u) => (
+                        <Chip key={u} selected={rangeUnit === u} onClick={() => setRangeUnit(u)}>
+                          {t.newTrip.unit[u]}
+                        </Chip>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-sm font-medium text-sky">{t.trip.plusMinus(rangeAmount * (rangeUnit === "weeks" ? 7 : 1))}</p>
+                  </div>
+                )}
+              </fieldset>
+            )}
           </div>
 
           <fieldset>
