@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ChevronDown, Compass, Globe2 } from "lucide-react";
+import { ChevronDown, Globe2 } from "lucide-react";
+import { LogoMark } from "./Logo";
 import { Photo } from "./Photo";
 import { TripCard } from "./TripBits";
 import { LangToggle, PointsPill, SegTabs } from "./ui";
@@ -60,9 +61,8 @@ export function Feed() {
         <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
           <div className="flex items-center justify-between gap-2">
             <Link href={href("/")} className="flex items-center gap-2">
-              <span className="glass flex h-9 w-9 items-center justify-center rounded-xl">
-                <Compass size={20} aria-hidden />
-              </span>
+              {/* the solid app icon, since the photo behind it changes daily and can be bright */}
+              <LogoMark size={36} tile className="shadow-lg shadow-navy/30" />
               <span className="text-lg font-bold tracking-tight">{t.appName}</span>
             </Link>
             <div className="flex items-center gap-2">

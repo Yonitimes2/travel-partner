@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Compass, Hourglass, ShieldCheck } from "lucide-react";
+import { Hourglass, ShieldCheck } from "lucide-react";
+import { LogoMark } from "./Logo";
 import { PartyPicker } from "./PartyPicker";
 import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profile";
 import { Photo } from "./Photo";
@@ -85,9 +86,7 @@ export function Welcome() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-navy/25 to-navy" />
         <div className="relative flex min-h-[calc(100dvh-2rem)] flex-col px-6 pb-10 pt-5">
           <div className="flex items-center justify-between">
-            <span className="glass flex h-11 w-11 items-center justify-center rounded-2xl">
-              <Compass size={24} aria-hidden />
-            </span>
+            <LogoMark size={44} tile className="shadow-lg shadow-navy/30" />
             <LangToggle />
           </div>
           <div className="mt-auto">
