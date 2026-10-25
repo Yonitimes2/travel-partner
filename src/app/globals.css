@@ -1,30 +1,33 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-rubik), system-ui, sans-serif;
+  --font-sans: var(--font-heebo), system-ui, sans-serif;
 }
 
+/* an airline feel: deep navy, clean white, a bright blue accent and gold for points */
 @theme {
-  --color-sand: #f6f2eb;
-  --color-cream: #fbf8f3;
-  --color-ink: #1f2b2e;
-  --color-muted: #66736f;
-  --color-line: #e6dfd3;
-  --color-brand: #0e6b62;
-  --color-brand-strong: #0a524b;
-  --color-brand-soft: #e1f0ec;
-  --color-plan: #9a5b00;
-  --color-plan-soft: #fdf1d8;
-  --color-coral: #e0603a;
+  --color-navy: #0b1d4d;
+  --color-navy-2: #14307a;
+  --color-sky: #2563eb;
+  --color-sky-soft: #e8f0ff;
+  --color-mist: #f2f5fa;
+  --color-ink: #0f1b3d;
+  --color-muted: #66708a;
+  --color-line: #e2e7f1;
+  --color-gold: #b88a1e;
+  --color-gold-soft: #fbf2d9;
+  --color-mint: #0f9d77;
+  --color-mint-soft: #e2f6ef;
+  --color-coral: #e5534b;
 }
 
 html {
-  background: #e9e3d8;
+  background: #dfe5ef;
 }
 
 body {
   color: var(--color-ink);
-  font-family: var(--font-rubik), system-ui, sans-serif;
+  font-family: var(--font-heebo), system-ui, sans-serif;
 }
 
 /* phones: 16px text in fields stops iOS from zooming in when a field gets focus */
@@ -47,4 +50,40 @@ body {
 /* space for the iPhone home bar when installed as an app */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* frosted glass over the destination art */
+.glass {
+  background: rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.28);
+}
+
+/* the dashed tear line of a boarding pass, with a notch cut on each side */
+.perforation {
+  position: relative;
+  border-top: 2px dashed var(--color-line);
+}
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -11px;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--color-mist);
+}
+.perforation::before {
+  left: -11px;
+}
+.perforation::after {
+  right: -11px;
+}
+
+/* big countdown digits */
+.digits {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }

@@ -1,21 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, CalendarDays, Hourglass, Lightbulb, MapPin, Users } from "lucide-react";
+import { BadgeCheck, Hourglass, Lightbulb, Plane, Users } from "lucide-react";
 import { Avatar } from "./Avatar";
+import { Scene } from "./Scene";
+import { PointsPill } from "./ui";
 import { useT } from "./Providers";
-import { daysBetween, deadlineOf, formatDay, formatRange } from "@/lib/dates";
+import { daysBetween, deadlineOf, formatDay } from "@/lib/dates";
 import type { Trip, TripKind, User } from "@/lib/types";
 
-export function KindBadge({ kind }: { kind: TripKind }) {
+export function KindBadge({ kind, onDark = false }: { kind: TripKind; onDark?: boolean }) {
   const { t } = useT();
-  return kind === "booked" ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-white">
+  return kind === "closed" ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2.5 py-1 text-xs font-bold text-white shadow-sm">
       <BadgeCheck size={14} aria-hidden />
-      {t.kind.booked}
+      {t.kind.closed}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-plan-soft px-2.5 py-1 text-xs font-semibold text-plan">
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+        onDark ? "glass text-white" : "bg-sky-soft text-sky"
+      }`}
+    >
       <Lightbulb size={14} aria-hidden />
       {t.kind.planned}
     </span>
@@ -28,7 +34,7 @@ export function StyleChips({ trip, max }: { trip: Trip; max?: number }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {styles.map((s) => (
-        <span key={s} className="rounded-full bg-cream px-2.5 py-1 text-xs text-muted ring-1 ring-line">
+        <span key={s} className="rounded-full bg-mist px-2.5 py-1 text-xs font-medium text-muted">
           {t.style[s]}
         </span>
       ))}
@@ -36,74 +42,80 @@ export function StyleChips({ trip, max }: { trip: Trip; max?: number }) {
   );
 }
 
-/** "12–19 Nov · 8 days" */
-export function TripDates({ trip }: { trip: Trip }) {
+/** depart ✈ return, the way a boarding pass shows it */
+export function FlightLine({ trip }: { trip: Trip }) {
   const { t, lang } = useT();
+  const days = daysBetween(trip.startDate, trip.endDate) + 1;
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <CalendarDays size={16} className="text-muted" aria-hidden />
-      <span>
-        {formatRange(trip.startDate, trip.endDate, lang)}
-        <span className="text-muted"> · {t.trip.days(daysBetween(trip.startDate, trip.endDate) + 1)}</span>
-      </span>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <div>
+        <div className="text-[11px] font-medium text-muted">{t.trip.depart}</div>
+        <div className="whitespace-nowrap text-lg font-bold text-ink">{formatDay(trip.startDate, lang)}</div>
+      </div>
+      <div className="flex min-w-14 flex-col items-center text-sky">
+        <div className="flex w-full items-center gap-1">
+          <span className="h-px flex-1 border-t-2 border-dotted border-sky/40" />
+          <Plane size={18} className="rotate-45 rtl:-rotate-[135deg]" aria-hidden />
+          <span className="h-px flex-1 border-t-2 border-dotted border-sky/40" />
+        </div>
+        <span className="mt-0.5 text-[11px] font-semibold text-muted">{t.trip.days(days)}</span>
+      </div>
+      <div className="text-end">
+        <div className="text-[11px] font-medium text-muted">{t.trip.return}</div>
+        <div className="whitespace-nowrap text-lg font-bold text-ink">{formatDay(trip.endDate, lang)}</div>
+      </div>
+    </div>
+  );
+}
+
+/** "8 days left", for the corner of the art */
+export function ClosesChip({ trip, today }: { trip: Trip; today: string }) {
+  const { t } = useT();
+  const left = daysBetween(today, deadlineOf(trip));
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${left <= 3 ? "bg-coral text-white" : "glass text-white"}`}>
+      <Hourglass size={13} aria-hidden />
+      {t.trip.closesIn(left)}
     </span>
   );
 }
 
-/** "Open to join until 2 Nov · 8 days left" */
-export function DeadlineLine({ trip, today }: { trip: Trip; today: string }) {
-  const { t, lang } = useT();
-  const last = deadlineOf(trip);
-  const left = daysBetween(today, last);
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Hourglass size={15} className="text-muted" aria-hidden />
-      <span>
-        {t.trip.openUntil(formatDay(last, lang))}
-        <span className={left <= 3 ? "font-medium text-coral" : "text-muted"}> · {t.trip.closesIn(left)}</span>
-      </span>
-    </span>
-  );
-}
-
-export function TripCard({ trip, owner, today }: { trip: Trip; owner: User; today: string }) {
+export function TripCard({ trip, owner, today, points }: { trip: Trip; owner: User; today: string; points: number }) {
   const { t, href } = useT();
   return (
     <Link
       href={href(`/trips/${trip.id}`)}
-      className="block rounded-2xl bg-white p-4 shadow-sm ring-1 ring-line transition hover:shadow-md hover:ring-brand/30"
+      className="block overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-14px_rgba(11,29,77,0.35)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-14px_rgba(11,29,77,0.45)]"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">
-          <Avatar id={owner.avatar} size={34} />
-          <span className="truncate text-sm">
-            <span className="font-medium text-ink">{owner.nickname}</span>
-            <span className="text-muted"> · {owner.city}</span>
-          </span>
-        </span>
-        <KindBadge kind={trip.kind} />
+      <div className="relative h-36">
+        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/25 to-transparent" />
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+          <KindBadge kind={trip.kind} onDark />
+          <ClosesChip trip={trip} today={today} />
+        </div>
+        <div className="absolute inset-x-4 bottom-3 text-white">
+          <div className="text-xs font-medium opacity-80">{t.area[trip.area]}</div>
+          <h3 className="text-xl font-bold leading-tight">{trip.place}</h3>
+        </div>
       </div>
 
-      <h3 className="mt-3 text-lg font-semibold leading-snug text-ink">{trip.place}</h3>
+      <div className="px-4 pb-3 pt-3">
+        <FlightLine trip={trip} />
+      </div>
 
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-ink">
-        <TripDates trip={trip} />
-        <span className="inline-flex items-center gap-1.5">
-          <MapPin size={16} className="text-muted" aria-hidden />
-          {t.area[trip.area]}
+      <div className="perforation" />
+
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <span className="flex min-w-0 items-center gap-2">
+          <Avatar id={owner.avatar} size={30} />
+          <span className="truncate text-sm font-semibold text-ink">{owner.nickname}</span>
+          <PointsPill points={points} compact />
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Users size={16} className="text-muted" aria-hidden />
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-navy">
+          <Users size={15} aria-hidden />
           {t.wanted[owner.gender][trip.wanted]}
         </span>
-      </div>
-
-      <div className="mt-3">
-        <StyleChips trip={trip} max={3} />
-      </div>
-
-      <div className="mt-3 border-t border-line pt-3 text-xs text-ink">
-        <DeadlineLine trip={trip} today={today} />
       </div>
     </Link>
   );

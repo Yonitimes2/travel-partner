@@ -1,107 +1,157 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Check, Clock, Lock, MapPin, MessageCircle, Users, X } from "lucide-react";
+import { Check, Clock, Hourglass, Lock, MapPin, MessageCircle, Minus, Pencil, Plus, Users, X } from "lucide-react";
 import { Avatar } from "./Avatar";
-import { DeadlineLine, KindBadge, StyleChips, TripDates } from "./TripBits";
+import { UserActions } from "./Moderation";
+import { Scene } from "./Scene";
+import { FlightLine, KindBadge, StyleChips } from "./TripBits";
+import { BackButton, Card, PointsPill, Sheet, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
-import { isOpen } from "@/lib/dates";
+import { daysBetween, deadlineOf, formatDay, isOpen } from "@/lib/dates";
+import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Trip, User } from "@/lib/types";
 
 export const NOTE_MAX = 200;
 
-export function BackLink({ to }: { to: string }) {
-  const { t, href } = useT();
+/** age group, observance, pace and how they travel — what helps decide on a partner */
+export function ProfileFacts({ user }: { user: User }) {
+  const { t } = useT();
+  const facts = [t.ageLabel(t.ageGroup[user.ageGroup]), t.observance[user.observance], t.pace[user.pace], t.travelsAs[user.travelsAs]];
   return (
-    <Link href={href(to)} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
-      <ArrowLeft size={16} className="rtl:rotate-180" aria-hidden />
-      {t.trip.back}
-    </Link>
+    <div className="flex flex-wrap gap-1.5">
+      {facts.map((f) => (
+        <span key={f} className="rounded-full bg-sky-soft px-2.5 py-1 text-xs font-semibold text-navy">
+          {f}
+        </span>
+      ))}
+    </div>
   );
 }
 
 export function TripView({ id }: { id: string }) {
-  const { t } = useT();
-  const { users, trips, meId, today } = useApp();
+  const { t, lang, href } = useT();
+  const router = useRouter();
+  const { users, trips, requests, blocks, meId, today } = useApp();
   const me = findUser(users, meId)!;
   const trip = trips.find((tr) => tr.id === id);
   const owner = trip && findUser(users, trip.ownerId);
+  const hasRequest = requests.some((r) => r.tripId === id && r.fromUserId === meId);
 
   // a trip from the other section doesn't exist as far as this viewer is concerned
-  if (!trip || !owner || owner.gender !== me.gender) {
+  if (!trip || !owner || (!canSee(trip, owner, me, blocks) && !hasRequest)) {
     return (
-      <div>
-        <BackLink to="/" />
-        <div className="rounded-2xl bg-white px-4 py-10 text-center text-muted ring-1 ring-line">{t.trip.notFound}</div>
+      <div className="p-4">
+        <BackButton to="/" onDark={false} />
+        <Card className="mt-4 py-10 text-center text-muted">{t.trip.notFound}</Card>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-3">
-      <BackLink to="/" />
+  const mine = trip.ownerId === meId;
+  const toGo = Math.max(0, daysBetween(today, trip.startDate));
+  const stats = statsOf(owner, trips, requests);
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-line">
-        <KindBadge kind={trip.kind} />
-        <h1 className="mt-3 text-2xl font-bold leading-tight text-ink">{trip.place}</h1>
-        <div className="mt-3 space-y-2 text-sm text-ink">
-          <div>
-            <TripDates trip={trip} />
+  return (
+    <div>
+      <section className="relative h-72 overflow-hidden text-white">
+        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/10 to-navy/90" />
+        <div className="relative flex h-full flex-col px-4 pb-14 pt-4">
+          <div className="flex items-center justify-between">
+            <BackButton to={mine ? "/my" : "/"} />
+            {mine ? (
+              <Link href={href(`/trips/${trip.id}/edit`)} aria-label={t.trip.edit} className="glass flex h-10 w-10 items-center justify-center rounded-full">
+                <Pencil size={18} aria-hidden />
+              </Link>
+            ) : (
+              <UserActions user={owner} onBlocked={() => router.push(href("/"))} />
+            )}
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin size={16} className="text-muted" aria-hidden />
+          <div className="mt-auto">
+            <div className="flex flex-wrap items-center gap-2">
+              <KindBadge kind={trip.kind} onDark />
+              {trip.wanted === "families" && <span className="glass rounded-full px-2.5 py-1 text-xs font-semibold">{t.trip.families}</span>}
+            </div>
+            <h1 className="mt-2 text-[28px] font-extrabold leading-tight">{trip.place}</h1>
+            <p className="mt-0.5 flex items-center gap-1 text-sm opacity-85">
+              <MapPin size={14} aria-hidden />
               {t.area[trip.area]}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Users size={16} className="text-muted" aria-hidden />
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="relative -mt-10 space-y-3 px-4">
+        {/* the countdown and the boarding-pass dates */}
+        <div className="overflow-hidden rounded-3xl bg-white shadow-[0_14px_36px_-16px_rgba(11,29,77,0.45)]">
+          <div className="flex items-center gap-4 px-4 py-4">
+            <div className="text-center">
+              <div className="digits text-5xl font-extrabold leading-none text-navy">{toGo}</div>
+              <div className="mt-1 text-xs font-semibold text-muted">{t.trip.daysToGo}</div>
+            </div>
+            <div className="h-14 w-px bg-line" />
+            <div className="min-w-0 flex-1">
+              <FlightLine trip={trip} />
+            </div>
+          </div>
+          <div className="perforation" />
+          <div className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-navy">
+              <Users size={16} aria-hidden />
               {t.wanted[owner.gender][trip.wanted]}
             </span>
+            <span className="inline-flex items-center gap-1.5 text-muted">
+              <Hourglass size={15} aria-hidden />
+              {trip.status === "full" ? t.trip.full : t.trip.openUntil(formatDay(deadlineOf(trip), lang))}
+            </span>
           </div>
         </div>
-      </section>
 
-      <JoinAction trip={trip} owner={owner} meId={meId} today={today} />
+        <JoinAction trip={trip} owner={owner} meId={meId} today={today} />
 
-      <section className="rounded-2xl bg-white p-4 ring-1 ring-line">
-        {trip.description && (
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-muted">{t.trip.about}</h2>
-            <p className="mt-1.5 whitespace-pre-line leading-relaxed text-ink">{trip.description}</p>
-          </div>
+        {(trip.description || trip.styles.length > 0) && (
+          <Card>
+            {trip.description && (
+              <>
+                <h2 className="text-sm font-bold text-muted">{t.trip.about}</h2>
+                <p className="mt-1.5 whitespace-pre-line leading-relaxed text-ink">{trip.description}</p>
+              </>
+            )}
+            {trip.styles.length > 0 && (
+              <div className={trip.description ? "mt-4" : ""}>
+                <h2 className="text-sm font-bold text-muted">{t.trip.style}</h2>
+                <div className="mt-2">
+                  <StyleChips trip={trip} />
+                </div>
+              </div>
+            )}
+          </Card>
         )}
-        {trip.styles.length > 0 && (
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-muted">{t.trip.style}</h2>
-            <div className="mt-2">
-              <StyleChips trip={trip} />
+
+        <Card>
+          <h2 className="text-sm font-bold text-muted">{t.trip.postedBy}</h2>
+          <div className="mt-2 flex items-center gap-3">
+            <Avatar id={owner.avatar} size={52} />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-lg font-bold text-ink">{owner.nickname}</span>
+                <PointsPill points={stats.points} />
+              </div>
+              <div className="text-sm text-muted">
+                {owner.city} · {t.stats(stats.trips, stats.joined)}
+              </div>
             </div>
           </div>
-        )}
-        <h2 className="text-sm font-semibold text-muted">{t.trip.joining}</h2>
-        <div className="mt-1.5 text-sm text-ink">
-          <DeadlineLine trip={trip} today={today} />
-          {trip.deadline.type === "daysBefore" && (
-            <p className="mt-1 ps-6 text-xs text-muted">{t.trip.daysBefore(trip.deadline.days)}</p>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-2xl bg-white p-4 ring-1 ring-line">
-        <h2 className="text-sm font-semibold text-muted">{t.trip.postedBy}</h2>
-        <div className="mt-2 flex items-center gap-3">
-          <Avatar id={owner.avatar} size={48} />
-          <div className="min-w-0">
-            <div className="font-semibold text-ink">{owner.nickname}</div>
-            <div className="text-sm text-muted">
-              {owner.city} · {t.travelsAs[owner.travelsAs]}
-            </div>
+          <div className="mt-3">
+            <ProfileFacts user={owner} />
           </div>
-        </div>
-        {owner.about && <p className="mt-2 text-sm text-ink">{owner.about}</p>}
-      </section>
+          {owner.about && <p className="mt-3 text-sm text-ink">{owner.about}</p>}
+        </Card>
+      </div>
     </div>
   );
 }
@@ -110,6 +160,7 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
   const { t, href } = useT();
   const requests = useApp((s) => s.requests);
   const respond = useApp((s) => s.respond);
+  const closeTrip = useApp((s) => s.closeTrip);
   const [open, setOpen] = useState(false);
 
   const mine = requests.find((r) => r.tripId === trip.id && r.fromUserId === meId);
@@ -119,8 +170,8 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
   if (trip.ownerId === meId) {
     body = (
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-ink">{t.trip.yours}</span>
-        <Link href={href("/my")} className="rounded-full bg-brand-soft px-4 py-2 text-sm font-semibold text-brand-strong">
+        <span className="font-semibold text-ink">{t.trip.yours}</span>
+        <Link href={href("/my")} className="rounded-full bg-sky-soft px-4 py-2 text-sm font-bold text-navy">
           {t.trip.manage}
           {incoming > 0 && ` (${t.trip.requests(incoming)})`}
         </Link>
@@ -128,15 +179,20 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
     );
   } else if (mine?.status === "pending") {
     body = (
-      <div className="space-y-2">
-        <p className="flex items-center gap-2 text-sm font-medium text-plan">
+      <div className="space-y-3">
+        <p className="flex items-center gap-2 font-semibold text-sky">
           <Clock size={18} aria-hidden />
           {t.trip.requestPending}
         </p>
+        {trip.kind === "planned" && <p className="text-sm text-muted">{t.join.plannedNote}</p>}
         <button
           type="button"
-          onClick={() => respond(mine.id, "accepted")}
-          className="w-full rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
+          onClick={() => {
+            // in the demo the owner closes the trip (if needed) and accepts
+            if (trip.kind === "planned") closeTrip(trip.id);
+            respond(mine.id, "accepted");
+          }}
+          className="w-full rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-900"
         >
           {t.demo.simulateAccept}
         </button>
@@ -145,14 +201,11 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
   } else if (mine?.status === "accepted") {
     body = (
       <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm font-medium text-brand">
+        <span className="flex items-center gap-2 font-semibold text-mint">
           <Check size={18} aria-hidden />
           {t.trip.requestAccepted}
         </span>
-        <Link
-          href={href(`/chat/${mine.id}`)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
-        >
+        <Link href={href(`/chat/${mine.id}`)} className={`${primaryButton} px-4 py-2.5 text-sm`}>
           <MessageCircle size={16} aria-hidden />
           {t.trip.openChat}
         </Link>
@@ -160,27 +213,23 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
     );
   } else if (mine?.status === "declined") {
     body = (
-      <p className="flex items-center gap-2 text-sm font-medium text-muted">
+      <p className="flex items-center gap-2 font-semibold text-muted">
         <X size={18} aria-hidden />
         {t.trip.requestDeclined}
       </p>
     );
   } else if (!isOpen(trip, today)) {
-    body = <p className="text-sm font-medium text-muted">{t.trip.closed}</p>;
+    body = <p className="font-semibold text-muted">{trip.status === "full" ? t.trip.full : t.trip.closedToRequests}</p>;
   } else {
     body = (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full rounded-xl bg-brand py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-strong"
-      >
+      <button type="button" onClick={() => setOpen(true)} className={`${primaryButton} w-full py-4 text-lg`}>
         {t.trip.askToJoin}
       </button>
     );
   }
 
   return (
-    <section className="rounded-2xl bg-white p-4 ring-1 ring-line">
+    <Card>
       {body}
       {trip.ownerId !== meId && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-muted">
@@ -189,7 +238,7 @@ function JoinAction({ trip, owner, meId, today }: { trip: Trip; owner: User; meI
         </p>
       )}
       {open && <JoinSheet trip={trip} owner={owner} onClose={() => setOpen(false)} />}
-    </section>
+    </Card>
   );
 }
 
@@ -198,26 +247,19 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
   const toast = useToast();
   const askToJoin = useApp((s) => s.askToJoin);
   const [note, setNote] = useState("");
+  const [party, setParty] = useState(trip.wanted === "families" ? 4 : 1);
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
-    askToJoin(trip.id, note);
+    askToJoin(trip.id, note, party);
     toast(t.join.sent);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40" onClick={onClose}>
-      <form
-        onSubmit={send}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal
-        aria-labelledby="join-title"
-        className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-8 shadow-2xl"
-      >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line" />
-        <h2 id="join-title" className="text-lg font-bold text-ink">
+    <Sheet onClose={onClose} labelledBy="join-title">
+      <form onSubmit={send}>
+        <h2 id="join-title" className="text-xl font-bold text-ink">
           {t.join.title}
         </h2>
         <p className="mt-1 flex items-center gap-2 text-sm text-muted">
@@ -225,11 +267,26 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
           {owner.nickname} · {trip.place}
         </p>
 
+        {trip.kind === "planned" && <p className="mt-3 rounded-2xl bg-sky-soft px-3.5 py-2.5 text-sm text-navy">{t.join.plannedNote}</p>}
         {trip.wanted === "families" && (
-          <p className="mt-3 rounded-xl bg-plan-soft px-3 py-2 text-sm text-plan">{t.join.familiesHint}</p>
+          <>
+            <p className="mt-3 rounded-2xl bg-gold-soft px-3.5 py-2.5 text-sm text-gold">{t.join.familiesHint}</p>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-sm font-semibold text-ink">{t.join.party}</span>
+              <span className="flex items-center gap-3">
+                <button type="button" aria-label="-" onClick={() => setParty((n) => Math.max(1, n - 1))} className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-line">
+                  <Minus size={16} aria-hidden />
+                </button>
+                <span className="digits w-6 text-center text-lg font-bold">{party}</span>
+                <button type="button" aria-label="+" onClick={() => setParty((n) => Math.min(15, n + 1))} className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-line">
+                  <Plus size={16} aria-hidden />
+                </button>
+              </span>
+            </div>
+          </>
         )}
 
-        <label className="mt-4 block text-sm font-medium text-ink" htmlFor="join-note">
+        <label className="mb-1.5 mt-4 block text-sm font-semibold text-ink" htmlFor="join-note">
           {t.join.noteLabel}
         </label>
         <textarea
@@ -240,21 +297,21 @@ function JoinSheet({ trip, owner, onClose }: { trip: Trip; owner: User; onClose:
           rows={3}
           autoFocus
           placeholder={t.join.notePlaceholder}
-          className="mt-1.5 w-full resize-none rounded-xl border border-line bg-cream px-3 py-2.5 text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className={`${inputClass} resize-none`}
         />
         <div className="mt-1 text-end text-xs text-muted" dir="ltr">
           {note.length}/{NOTE_MAX}
         </div>
 
         <div className="mt-4 flex gap-2">
-          <button type="submit" className="flex-1 rounded-xl bg-brand py-3 font-semibold text-white hover:bg-brand-strong">
+          <button type="submit" className={`${primaryButton} flex-1`}>
             {t.join.send}
           </button>
-          <button type="button" onClick={onClose} className="rounded-xl px-5 py-3 font-medium text-muted hover:bg-cream">
+          <button type="button" onClick={onClose} className="rounded-2xl px-5 font-semibold text-muted">
             {t.join.cancel}
           </button>
         </div>
       </form>
-    </div>
+    </Sheet>
   );
 }

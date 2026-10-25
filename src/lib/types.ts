@@ -1,10 +1,13 @@
 export type Lang = "he" | "en";
 
-/** each person only sees trips posted by people of the same gender */
+/** each person sees their own gender's section; trips looking for families show in both */
 export type Gender = "male" | "female";
 
-/** planned: an idea that depends on finding partners (free); booked: already booked, partners optional (paid) */
-export type TripKind = "planned" | "booked";
+/** planned: an idea, free; closed: going ahead, paid — only a closed trip can accept partners */
+export type TripKind = "planned" | "closed";
+
+/** open: taking requests; full: the owner found partners and stopped new requests */
+export type TripStatus = "open" | "full";
 
 export type Wanted = "one" | "few" | "families";
 
@@ -13,6 +16,16 @@ export type Area = "north" | "center" | "jerusalem" | "south" | "europe" | "usa"
 export type TripStyle = "hiking" | "nature" | "cities" | "relaxed" | "adventure" | "shabbat" | "food";
 
 export type TravelsAs = "solo" | "family";
+
+export type AgeGroup = "18-25" | "26-35" | "36-50" | "50+";
+
+/** how strictly kashrut and Shabbat are kept on a trip */
+export type Observance = "strict" | "kosher" | "traditional";
+
+export type Pace = "easy" | "medium" | "hard";
+
+/** pending: signed up and waiting for the recommender and the section's admin */
+export type UserStatus = "pending" | "active" | "suspended";
 
 /** until when the poster is looking for partners: a fixed date, or a number of days before the trip */
 export type Deadline = { type: "date"; date: string } | { type: "daysBefore"; days: number };
@@ -37,14 +50,25 @@ export interface User {
   avatar: AvatarId;
   gender: Gender;
   travelsAs: TravelsAs;
+  ageGroup: AgeGroup;
+  observance: Observance;
+  pace: Pace;
   city: string;
   about: string;
+  status: UserStatus;
+  /** the existing member who recommended them */
+  referredBy?: string;
+  /** trips and partners from before the data in this prototype, so the points have history */
+  history: { trips: number; joined: number };
+  notify: { push: boolean; email: boolean };
+  createdAt: string;
 }
 
 export interface Trip {
   id: string;
   ownerId: string;
   kind: TripKind;
+  status: TripStatus;
   area: Area;
   /** free text, e.g. "הדולומיטים, צפון איטליה" */
   place: string;
@@ -66,6 +90,8 @@ export interface JoinRequest {
   fromUserId: string;
   /** the short note sent with the request; the only text allowed before the owner accepts */
   note: string;
+  /** how many people are coming (families) */
+  party: number;
   status: RequestStatus;
   createdAt: string;
 }
@@ -77,4 +103,21 @@ export interface Message {
   fromUserId: string;
   text: string;
   at: string;
+}
+
+export type ReportReason = "behavior" | "fake" | "spam" | "other";
+
+export interface Report {
+  id: string;
+  fromUserId: string;
+  aboutUserId: string;
+  reason: ReportReason;
+  text: string;
+  status: "open" | "handled";
+  createdAt: string;
+}
+
+export interface Block {
+  by: string;
+  who: string;
 }

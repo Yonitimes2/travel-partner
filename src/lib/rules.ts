@@ -1,0 +1,37 @@
+import { isOpen } from "./dates";
+import type { Block, JoinRequest, Trip, User } from "./types";
+
+/** the price of a closed trip (accepting partners); free while the beta lasts */
+export const TRIP_FEE = "₪79";
+export const BETA = true;
+
+/** active planned trips one person can have at a time */
+export const PLANNED_LIMIT = 2;
+
+export const isBlocked = (blocks: Block[], a: string, b: string) =>
+  blocks.some((x) => (x.by === a && x.who === b) || (x.by === b && x.who === a));
+
+/**
+ * Who sees a trip: people of the owner's gender, and everyone when the trip is looking for families.
+ * Owners always see their own trips; suspended, pending and blocked people are left out.
+ */
+export function canSee(trip: Trip, owner: User, me: User, blocks: Block[]) {
+  if (trip.ownerId === me.id) return true;
+  if (owner.status !== "active" || isBlocked(blocks, me.id, owner.id)) return false;
+  return owner.gender === me.gender || trip.wanted === "families";
+}
+
+/** points come from activity only: trips that people joined, and how many joined */
+export function statsOf(user: User, trips: Trip[], requests: JoinRequest[]) {
+  const mine = new Set(trips.filter((t) => t.ownerId === user.id).map((t) => t.id));
+  const accepted = requests.filter((r) => r.status === "accepted" && mine.has(r.tripId));
+  const tripCount = user.history.trips + new Set(accepted.map((r) => r.tripId)).size;
+  const joined = user.history.joined + accepted.reduce((n, r) => n + r.party, 0);
+  return { trips: tripCount, joined, points: tripCount * 10 + joined * 5 };
+}
+
+export type Tier = "bronze" | "silver" | "gold";
+export const tierOf = (points: number): Tier => (points >= 150 ? "gold" : points >= 50 ? "silver" : "bronze");
+
+export const activePlanned = (trips: Trip[], userId: string, today: string) =>
+  trips.filter((t) => t.ownerId === userId && t.kind === "planned" && isOpen(t, today)).length;

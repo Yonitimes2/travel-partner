@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, MessageCircle, X } from "lucide-react";
+import { Check, Lock, MessageCircle, Pencil, PartyPopper, RotateCcw, Trash2, X } from "lucide-react";
 import { Avatar } from "./Avatar";
-import { KindBadge, TripDates } from "./TripBits";
-import { useT } from "./Providers";
-import { isOpen } from "@/lib/dates";
+import { PaymentPanel } from "./Payment";
+import { Scene } from "./Scene";
+import { FlightLine, KindBadge } from "./TripBits";
+import { ProfileFacts } from "./TripView";
+import { Body, Empty, PageHeader, PointsPill, SegTabs, Sheet, primaryButton } from "./ui";
+import { useT, useToast } from "./Providers";
+import { formatRange, isOpen } from "@/lib/dates";
+import { statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
-import type { JoinRequest, RequestStatus } from "@/lib/types";
+import type { JoinRequest, RequestStatus, Trip } from "@/lib/types";
 
 export function MyTrips() {
   const { t } = useT();
@@ -16,179 +21,294 @@ export function MyTrips() {
 
   return (
     <div>
-      <h1 className="mb-3 text-2xl font-bold text-ink">{t.my.title}</h1>
-      <div role="tablist" className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 ring-1 ring-line">
-        {(["posts", "sent"] as const).map((key) => (
-          <button
-            key={key}
-            role="tab"
-            type="button"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-              tab === key ? "bg-ink text-white" : "text-muted hover:text-ink"
-            }`}
-          >
-            {key === "posts" ? t.my.posts : t.my.sent}
-          </button>
-        ))}
-      </div>
-      <div className="mt-4">{tab === "posts" ? <Posted /> : <Sent />}</div>
+      <PageHeader title={t.my.title} />
+      <Body>
+        <SegTabs
+          value={tab}
+          onChange={setTab}
+          options={[
+            { key: "posts", label: t.my.posts },
+            { key: "sent", label: t.my.sent },
+          ]}
+        />
+        <div className="mt-4">{tab === "posts" ? <Posted /> : <Sent />}</div>
+      </Body>
     </div>
   );
 }
 
 function Posted() {
-  const { t, href } = useT();
-  const { users, trips, requests, meId, today, respond } = useApp();
+  const { t } = useT();
+  const { trips, meId } = useApp();
   const mine = trips.filter((tr) => tr.ownerId === meId).sort((a, b) => a.startDate.localeCompare(b.startDate));
-
   if (mine.length === 0) return <Empty text={t.my.emptyPosts} action={t.my.postTrip} to="/new" />;
-
   return (
-    <div className="space-y-4">
-      {mine.map((trip) => {
-        const incoming = requests.filter((r) => r.tripId === trip.id);
-        return (
-          <section key={trip.id} className="rounded-2xl bg-white ring-1 ring-line">
-            <Link href={href(`/trips/${trip.id}`)} className="block p-4">
-              <div className="flex items-center justify-between gap-2">
-                <KindBadge kind={trip.kind} />
-                {!isOpen(trip, today) && <span className="text-xs font-medium text-muted">{t.my.closed}</span>}
-              </div>
-              <h2 className="mt-2 text-lg font-semibold text-ink">{trip.place}</h2>
-              <div className="mt-1 text-sm text-ink">
-                <TripDates trip={trip} />
-              </div>
-            </Link>
-
-            <div className="border-t border-line px-4 py-3">
-              <h3 className="text-sm font-semibold text-muted">
-                {t.my.incoming} ({incoming.length})
-              </h3>
-              {incoming.length === 0 && <p className="mt-2 text-sm text-muted">{t.my.noRequests}</p>}
-              <ul className="mt-2 space-y-3">
-                {incoming.map((r) => {
-                  const from = findUser(users, r.fromUserId)!;
-                  return (
-                    <li key={r.id} className="rounded-xl bg-cream p-3 ring-1 ring-line">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Avatar id={from.avatar} size={32} />
-                          <span className="truncate text-sm">
-                            <span className="font-medium text-ink">{from.nickname}</span>
-                            <span className="text-muted"> · {from.city}</span>
-                          </span>
-                        </span>
-                        <StatusPill status={r.status} />
-                      </div>
-                      {r.note && <p className="mt-2 border-s-2 border-brand/40 ps-2.5 text-sm text-ink">{r.note}</p>}
-                      <RequestActions request={r} onRespond={respond} />
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </section>
-        );
-      })}
+    <div className="space-y-5">
+      {mine.map((trip) => (
+        <PostedTrip key={trip.id} trip={trip} />
+      ))}
     </div>
   );
 }
 
-function RequestActions({
+function PostedTrip({ trip }: { trip: Trip }) {
+  const { t, lang, href } = useT();
+  const toast = useToast();
+  const { users, trips, requests, today, respond, closeTrip, setTripStatus, deleteTrip } = useApp();
+  const [paying, setPaying] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const incoming = requests.filter((r) => r.tripId === trip.id);
+  const pending = incoming.filter((r) => r.status === "pending").length;
+  // a planned trip only shows the nickname and note; closing it unlocks the details and accepting
+  const locked = trip.kind === "planned";
+  const open = isOpen(trip, today);
+
+  return (
+    <section className="overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-16px_rgba(11,29,77,0.35)]">
+      <Link href={href(`/trips/${trip.id}`)} className="relative block h-28">
+        <Scene area={trip.area} className="absolute inset-0 h-full w-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/30 to-transparent" />
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+          <KindBadge kind={trip.kind} onDark />
+          {!open && (
+            <span className="glass rounded-full px-2.5 py-1 text-xs font-semibold text-white">
+              {trip.status === "full" ? t.trip.full : t.my.notOpen}
+            </span>
+          )}
+        </div>
+        <div className="absolute inset-x-4 bottom-2.5 text-white">
+          <h2 className="text-lg font-bold leading-tight">{trip.place}</h2>
+          <div className="text-xs opacity-85">{formatRange(trip.startDate, trip.endDate, lang)}</div>
+        </div>
+      </Link>
+
+      {/* the owner's actions */}
+      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5">
+        <Link href={href(`/trips/${trip.id}/edit`)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-navy hover:bg-mist">
+          <Pencil size={14} aria-hidden />
+          {t.trip.edit}
+        </Link>
+        {trip.status === "open" ? (
+          <button type="button" onClick={() => setTripStatus(trip.id, "full")} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-mint hover:bg-mint-soft">
+            <PartyPopper size={14} aria-hidden />
+            {t.my.foundPartners}
+          </button>
+        ) : (
+          <button type="button" onClick={() => setTripStatus(trip.id, "open")} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-navy hover:bg-mist">
+            <RotateCcw size={14} aria-hidden />
+            {t.my.reopen}
+          </button>
+        )}
+        {confirmDelete ? (
+          <span className="ms-auto inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                deleteTrip(trip.id);
+                toast(t.my.deleted);
+              }}
+              className="rounded-full bg-coral px-3 py-1.5 text-xs font-bold text-white"
+            >
+              {t.my.delete}
+            </button>
+            <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full px-2 py-1.5 text-xs font-semibold text-muted">
+              {t.moderation.cancel}
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className="ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-coral hover:bg-coral/10">
+            <Trash2 size={14} aria-hidden />
+            {t.my.delete}
+          </button>
+        )}
+      </div>
+      {confirmDelete && <p className="px-4 pb-2 text-xs text-coral">{t.my.confirmDelete}</p>}
+
+      <div className="perforation" />
+
+      <div className="px-4 py-3.5">
+        <h3 className="text-sm font-bold text-muted">
+          {t.my.incoming} ({incoming.length})
+        </h3>
+        {incoming.length === 0 && <p className="mt-2 text-sm text-muted">{t.my.noRequests}</p>}
+
+        {locked && pending > 0 && (
+          <div className="mt-3 rounded-2xl bg-gradient-to-br from-navy to-navy-2 p-3.5 text-white">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Lock size={16} aria-hidden />
+              {t.my.locked}
+            </p>
+            <button type="button" onClick={() => setPaying(true)} className="mt-3 w-full rounded-xl bg-white py-2.5 text-sm font-bold text-navy">
+              {t.my.unlock}
+            </button>
+          </div>
+        )}
+
+        <ul className="mt-3 space-y-2.5">
+          {incoming.map((r) => (
+            <RequestRow key={r.id} request={r} locked={locked} onRespond={respond} pointsOf={(id) => statsOf(findUser(users, id)!, trips, requests).points} />
+          ))}
+        </ul>
+      </div>
+
+      {paying && (
+        <Sheet onClose={() => setPaying(false)} labelledBy="pay-title">
+          <h2 id="pay-title" className="mb-4 text-xl font-bold text-ink">
+            {t.payment.title}
+          </h2>
+          <PaymentPanel
+            trip={trip}
+            onPay={() => {
+              closeTrip(trip.id);
+              setPaying(false);
+              toast(t.payment.done);
+            }}
+            onBack={() => setPaying(false)}
+          />
+        </Sheet>
+      )}
+    </section>
+  );
+}
+
+function RequestRow({
   request,
+  locked,
   onRespond,
+  pointsOf,
 }: {
   request: JoinRequest;
+  locked: boolean;
   onRespond: (id: string, status: Exclude<RequestStatus, "pending">) => void;
+  pointsOf: (userId: string) => number;
 }) {
   const { t, href } = useT();
-  if (request.status === "pending") {
-    return (
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={() => onRespond(request.id, "accepted")}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-strong"
-        >
-          <Check size={16} aria-hidden />
-          {t.my.accept}
-        </button>
-        <button
-          type="button"
-          onClick={() => onRespond(request.id, "declined")}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white py-2 text-sm font-semibold text-muted ring-1 ring-line hover:text-ink"
-        >
-          <X size={16} aria-hidden />
-          {t.my.decline}
-        </button>
+  const from = useApp((s) => findUser(s.users, request.fromUserId))!;
+
+  return (
+    <li className="rounded-2xl bg-mist p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2">
+          {locked ? (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-muted ring-1 ring-line">
+              <Lock size={15} aria-hidden />
+            </span>
+          ) : (
+            <Avatar id={from.avatar} size={36} />
+          )}
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5">
+              <span className="truncate font-semibold text-ink">{from.nickname}</span>
+              {!locked && <PointsPill points={pointsOf(from.id)} compact />}
+            </span>
+            {!locked && (
+              <span className="block truncate text-xs text-muted">
+                {from.city}
+                {request.party > 1 && ` · ${t.my.party(request.party)}`}
+              </span>
+            )}
+          </span>
+        </span>
+        <StatusPill status={request.status} />
       </div>
-    );
-  }
-  if (request.status === "accepted") {
-    return (
-      <Link
-        href={href(`/chat/${request.id}`)}
-        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand"
-      >
-        <MessageCircle size={16} aria-hidden />
-        {t.trip.openChat}
-      </Link>
-    );
-  }
-  return null;
+      {!locked && (
+        <div className="mt-2.5">
+          <ProfileFacts user={from} />
+        </div>
+      )}
+      {request.note && <p className="mt-2.5 border-s-[3px] border-sky/50 ps-2.5 text-sm text-ink">{request.note}</p>}
+
+      {request.status === "pending" && (
+        <div className="mt-3 flex gap-2">
+          {!locked && (
+            <button
+              type="button"
+              onClick={() => onRespond(request.id, "accepted")}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-navy py-2.5 text-sm font-bold text-white"
+            >
+              <Check size={16} aria-hidden />
+              {t.my.accept}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onRespond(request.id, "declined")}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white py-2.5 text-sm font-semibold text-muted ring-1 ring-line hover:text-ink"
+          >
+            <X size={16} aria-hidden />
+            {t.my.decline}
+          </button>
+        </div>
+      )}
+      {request.status === "accepted" && (
+        <Link href={href(`/chat/${request.id}`)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-sky">
+          <MessageCircle size={16} aria-hidden />
+          {t.trip.openChat}
+        </Link>
+      )}
+    </li>
+  );
 }
 
 function Sent() {
   const { t, href } = useT();
-  const { users, trips, requests, meId, respond } = useApp();
-  const sent = requests
-    .filter((r) => r.fromUserId === meId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const { users, trips, requests, meId, respond, closeTrip } = useApp();
+  const sent = requests.filter((r) => r.fromUserId === meId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   if (sent.length === 0) return <Empty text={t.my.emptySent} action={t.my.browse} to="/" />;
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4">
       {sent.map((r) => {
         const trip = trips.find((tr) => tr.id === r.tripId);
         const owner = trip && findUser(users, trip.ownerId);
         if (!trip || !owner) return null;
         return (
-          <li key={r.id} className="rounded-2xl bg-white p-4 ring-1 ring-line">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-2 text-sm">
-                <Avatar id={owner.avatar} size={28} />
-                <span className="truncate font-medium text-ink">{owner.nickname}</span>
+          <li key={r.id} className="overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-16px_rgba(11,29,77,0.35)]">
+            <Link href={href(`/trips/${trip.id}`)} className="flex items-center gap-3 p-3">
+              <span className="block h-16 w-16 shrink-0 overflow-hidden rounded-2xl">
+                <Scene area={trip.area} className="h-full w-full" />
               </span>
-              <StatusPill status={r.status} />
-            </div>
-            <Link href={href(`/trips/${trip.id}`)} className="mt-2 block text-lg font-semibold text-ink hover:text-brand">
-              {trip.place}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate font-bold text-ink">{trip.place}</span>
+                  <StatusPill status={r.status} />
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                  <Avatar id={owner.avatar} size={18} />
+                  {owner.nickname}
+                  <span>·</span>
+                  <KindLabel trip={trip} />
+                </span>
+              </span>
             </Link>
-            <div className="mt-1 text-sm text-ink">
-              <TripDates trip={trip} />
+            <div className="px-4 pb-3">
+              <FlightLine trip={trip} />
             </div>
-            {r.note && <p className="mt-2 border-s-2 border-line ps-2.5 text-sm text-muted">{r.note}</p>}
-            {r.status === "accepted" && (
-              <Link
-                href={href(`/chat/${r.id}`)}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
-              >
-                <MessageCircle size={16} aria-hidden />
-                {t.trip.openChat}
-              </Link>
-            )}
-            {r.status === "pending" && (
-              <button
-                type="button"
-                onClick={() => respond(r.id, "accepted")}
-                className="mt-3 w-full rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
-              >
-                {t.demo.simulateAccept}
-              </button>
-            )}
+            {(r.note || r.status !== "declined") && <div className="perforation" />}
+            <div className="space-y-3 px-4 py-3">
+              {r.note && <p className="border-s-[3px] border-line ps-2.5 text-sm text-muted">{r.note}</p>}
+              {r.status === "accepted" && (
+                <Link href={href(`/chat/${r.id}`)} className={`${primaryButton} w-full py-3 text-sm`}>
+                  <MessageCircle size={16} aria-hidden />
+                  {t.trip.openChat}
+                </Link>
+              )}
+              {r.status === "pending" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // in the demo the owner closes the trip (if needed) and accepts
+                    if (trip.kind === "planned") closeTrip(trip.id);
+                    respond(r.id, "accepted");
+                  }}
+                  className="w-full rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-900"
+                >
+                  {t.demo.simulateAccept}
+                </button>
+              )}
+            </div>
           </li>
         );
       })}
@@ -196,25 +316,13 @@ function Sent() {
   );
 }
 
-function StatusPill({ status }: { status: RequestStatus }) {
+function KindLabel({ trip }: { trip: Trip }) {
   const { t } = useT();
-  const tone =
-    status === "accepted"
-      ? "bg-brand-soft text-brand-strong"
-      : status === "declined"
-        ? "bg-line text-muted"
-        : "bg-plan-soft text-plan";
-  return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${tone}`}>{t.my.status[status]}</span>;
+  return <span className={trip.kind === "closed" ? "font-semibold text-mint" : "font-semibold text-sky"}>{t.kind[trip.kind]}</span>;
 }
 
-function Empty({ text, action, to }: { text: string; action: string; to: string }) {
-  const { href } = useT();
-  return (
-    <div className="rounded-2xl border border-dashed border-line bg-white/60 px-4 py-10 text-center">
-      <p className="text-sm text-muted">{text}</p>
-      <Link href={href(to)} className="mt-3 inline-block rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
-        {action}
-      </Link>
-    </div>
-  );
+function StatusPill({ status }: { status: RequestStatus }) {
+  const { t } = useT();
+  const tone = status === "accepted" ? "bg-mint-soft text-mint" : status === "declined" ? "bg-line text-muted" : "bg-sky-soft text-sky";
+  return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${tone}`}>{t.my.status[status]}</span>;
 }

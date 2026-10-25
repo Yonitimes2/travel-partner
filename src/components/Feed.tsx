@@ -1,28 +1,35 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Compass, Globe2 } from "lucide-react";
+import { Scene } from "./Scene";
 import { TripCard } from "./TripBits";
+import { LangToggle, PointsPill, SegTabs } from "./ui";
 import { useT } from "./Providers";
 import { formatMonth, isOpen, monthKey } from "@/lib/dates";
+import { canSee, statsOf } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Area, TripKind, Wanted } from "@/lib/types";
 
-const AREAS: Area[] = ["north", "center", "jerusalem", "south", "europe", "usa", "asia", "other"];
+export const AREAS: Area[] = ["north", "center", "jerusalem", "south", "europe", "usa", "asia", "other"];
 const WANTED: Wanted[] = ["one", "few", "families"];
 
 export function Feed() {
-  const { t, lang } = useT();
-  const { users, trips, meId, today, feed, setFeed } = useApp();
+  const { t, lang, href } = useT();
+  const { users, trips, requests, blocks, meId, today, feed, setFeed } = useApp();
   const me = findUser(users, meId)!;
 
-  // only the viewer's own section: trips posted by people of the same gender, still open to join
+  // the viewer's section: same-gender trips plus family trips from both sections, still open
   const section = useMemo(
     () =>
       trips
-        .filter((tr) => tr.ownerId !== meId && findUser(users, tr.ownerId)?.gender === me.gender && isOpen(tr, today))
+        .filter((tr) => {
+          const owner = findUser(users, tr.ownerId);
+          return tr.ownerId !== meId && owner && canSee(tr, owner, me, blocks) && isOpen(tr, today);
+        })
         .sort((a, b) => a.startDate.localeCompare(b.startDate)),
-    [trips, users, meId, me.gender, today],
+    [trips, users, meId, me, blocks, today],
   );
 
   const ofKind = section.filter((tr) => tr.kind === feed.kind);
@@ -35,68 +42,129 @@ export function Feed() {
   );
   const filtered = Boolean(feed.area || feed.wanted || feed.month);
   const countOf = (kind: TripKind) => section.filter((tr) => tr.kind === kind).length;
+  const pointsOf = (userId: string) => statsOf(findUser(users, userId)!, trips, requests).points;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t.greeting.morning : hour < 17 ? t.greeting.noon : t.greeting.evening;
+  const heroArea: Area = feed.area || shown[0]?.area || "other";
 
   return (
     <div>
-      <div role="tablist" className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 ring-1 ring-line">
-        {(["booked", "planned"] as const).map((kind) => (
-          <button
-            key={kind}
-            role="tab"
-            type="button"
-            aria-selected={feed.kind === kind}
-            onClick={() => setFeed({ kind, month: "" })}
-            className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-              feed.kind === kind ? (kind === "booked" ? "bg-brand text-white" : "bg-plan-soft text-plan") : "text-muted hover:text-ink"
-            }`}
-          >
-            {t.kindTab[kind]} <span className="font-normal opacity-75">({countOf(kind)})</span>
-          </button>
-        ))}
-      </div>
-      <p className="mt-2 px-1 text-sm text-muted">{t.kindHint[feed.kind]}</p>
-
-      <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
-        <FilterSelect
-          label={t.feed.area}
-          value={feed.area}
-          onChange={(v) => setFeed({ area: v as Area | "" })}
-          options={[["", t.feed.allAreas], ...AREAS.map((a) => [a, t.area[a]] as [string, string])]}
-        />
-        <FilterSelect
-          label={t.feed.wanted}
-          value={feed.wanted}
-          onChange={(v) => setFeed({ wanted: v as Wanted | "" })}
-          options={[["", t.feed.anyWanted], ...WANTED.map((w) => [w, t.wanted[me.gender][w]] as [string, string])]}
-        />
-        <FilterSelect
-          label={t.feed.month}
-          value={feed.month}
-          onChange={(v) => setFeed({ month: v })}
-          options={[["", t.feed.anyMonth], ...months.map((m) => [m, formatMonth(m, lang)] as [string, string])]}
-        />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between px-1 text-sm">
-        <span className="text-muted">{t.feed.count(shown.length)}</span>
-        {filtered && (
-          <button type="button" onClick={() => setFeed({ area: "", wanted: "", month: "" })} className="font-medium text-brand">
-            {t.feed.clear}
-          </button>
-        )}
-      </div>
-
-      <div className="mt-2 space-y-3">
-        {shown.map((tr) => (
-          <TripCard key={tr.id} trip={tr} owner={findUser(users, tr.ownerId)!} today={today} />
-        ))}
-        {shown.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-line bg-white/60 px-4 py-10 text-center text-sm text-muted">
-            {t.feed.empty}
+      {/* the hero: destination art under navy, like an airline home screen */}
+      <section className="relative h-[290px] overflow-hidden text-white">
+        <Scene area={heroArea} className="absolute inset-0 h-full w-full transition-opacity" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/55 via-navy/5 to-navy/80" />
+        <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <Link href={href("/")} className="flex items-center gap-2">
+              <span className="glass flex h-9 w-9 items-center justify-center rounded-xl">
+                <Compass size={20} aria-hidden />
+              </span>
+              <span className="text-lg font-bold tracking-tight">{t.appName}</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link href={href("/profile")}>
+                <PointsPill points={pointsOf(meId)} onDark />
+              </Link>
+              <LangToggle />
+            </div>
           </div>
-        )}
+          <div className="mt-auto">
+            <p className="text-sm font-medium opacity-85">{greeting(me.nickname)}</p>
+            <h1 className="mt-1 text-[32px] font-extrabold leading-[1.1] tracking-tight">{t.home.headline}</h1>
+            <span className="glass mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold">{t.section[me.gender]}</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="relative -mt-6 rounded-t-[28px] bg-mist px-4 pt-5">
+        <SegTabs
+          value={feed.kind}
+          onChange={(kind) => setFeed({ kind, month: "" })}
+          options={(["closed", "planned"] as const).map((kind) => ({
+            key: kind,
+            label: (
+              <>
+                {t.kindTab[kind]} <span className="font-normal opacity-70">({countOf(kind)})</span>
+              </>
+            ),
+          }))}
+        />
+        <p className="mt-2 px-1 text-sm text-muted">{t.kindHint[feed.kind]}</p>
+
+        {/* areas as round destination buttons */}
+        <div className="no-scrollbar -mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-1">
+          <AreaButton label={t.home.all} selected={!feed.area} onClick={() => setFeed({ area: "" })}>
+            <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-2 to-navy text-white">
+              <Globe2 size={24} aria-hidden />
+            </span>
+          </AreaButton>
+          {AREAS.map((a) => (
+            <AreaButton key={a} label={t.area[a]} selected={feed.area === a} onClick={() => setFeed({ area: feed.area === a ? "" : a })}>
+              <Scene area={a} className="h-full w-full" />
+            </AreaButton>
+          ))}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <FilterSelect
+            label={t.feed.wanted}
+            value={feed.wanted}
+            onChange={(v) => setFeed({ wanted: v as Wanted | "" })}
+            options={[["", `${t.feed.wanted}: ${t.feed.anyWanted}`], ...WANTED.map((w) => [w, t.wanted[me.gender][w]] as [string, string])]}
+          />
+          <FilterSelect
+            label={t.feed.month}
+            value={feed.month}
+            onChange={(v) => setFeed({ month: v })}
+            options={[["", t.feed.anyMonth], ...months.map((m) => [m, formatMonth(m, lang)] as [string, string])]}
+          />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between px-1 text-sm">
+          <span className="font-semibold text-ink">{t.feed.count(shown.length)}</span>
+          {filtered && (
+            <button type="button" onClick={() => setFeed({ area: "", wanted: "", month: "" })} className="font-semibold text-sky">
+              {t.feed.clear}
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 space-y-4">
+          {shown.map((tr) => (
+            <TripCard key={tr.id} trip={tr} owner={findUser(users, tr.ownerId)!} today={today} points={pointsOf(tr.ownerId)} />
+          ))}
+          {shown.length === 0 && (
+            <div className="rounded-3xl border-2 border-dashed border-line px-4 py-10 text-center text-sm text-muted">{t.feed.empty}</div>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function AreaButton({
+  label,
+  selected,
+  onClick,
+  children,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={selected} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+      <span
+        className={`block h-16 w-16 overflow-hidden rounded-full ring-offset-2 ring-offset-mist transition ${
+          selected ? "ring-[3px] ring-sky" : "ring-1 ring-line"
+        }`}
+      >
+        {children}
+      </span>
+      <span className={`w-full truncate text-center text-xs ${selected ? "font-bold text-navy" : "font-medium text-muted"}`}>{label}</span>
+    </button>
   );
 }
 
@@ -113,15 +181,15 @@ function FilterSelect({
 }) {
   return (
     <label
-      className={`relative flex shrink-0 items-center rounded-full ring-1 transition ${
-        value ? "bg-brand-soft text-brand-strong ring-brand/40" : "bg-white text-ink ring-line"
+      className={`relative flex min-w-0 flex-1 items-center rounded-2xl ring-1 transition ${
+        value ? "bg-sky-soft text-navy ring-sky/40" : "bg-white text-ink ring-line"
       }`}
     >
       <span className="sr-only">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-transparent py-2 ps-3.5 pe-8 text-sm font-medium outline-none"
+        className="w-full min-w-0 appearance-none truncate bg-transparent py-2.5 ps-3.5 pe-8 text-sm font-semibold outline-none"
       >
         {options.map(([v, text]) => (
           <option key={v} value={v}>
@@ -129,7 +197,7 @@ function FilterSelect({
           </option>
         ))}
       </select>
-      <ChevronDown size={16} className="pointer-events-none absolute end-2.5" aria-hidden />
+      <ChevronDown size={16} className="pointer-events-none absolute end-3" aria-hidden />
     </label>
   );
 }

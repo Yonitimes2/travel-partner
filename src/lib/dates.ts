@@ -26,7 +26,9 @@ export const daysBetween = (from: string, to: string) =>
 export const deadlineOf = (trip: Trip) =>
   trip.deadline.type === "date" ? trip.deadline.date : addDays(trip.startDate, -trip.deadline.days);
 
-export const isOpen = (trip: Trip, today: string) => deadlineOf(trip) >= today && trip.startDate >= today;
+/** still taking requests: not marked "found partners", and the deadline and departure haven't passed */
+export const isOpen = (trip: Trip, today: string) =>
+  trip.status === "open" && deadlineOf(trip) >= today && trip.startDate >= today;
 
 const locale = (lang: Lang) => (lang === "he" ? "he-IL" : "en-GB");
 

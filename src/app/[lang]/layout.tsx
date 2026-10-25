@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Rubik } from "next/font/google";
+import { Heebo } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { Providers } from "@/components/Providers";
 import { DEFAULT_LANG, LANGS, dictionaries, dirOf, isLang } from "@/lib/i18n";
 import "../globals.css";
 
-const rubik = Rubik({
-  variable: "--font-rubik",
+const heebo = Heebo({
+  variable: "--font-heebo",
   subsets: ["hebrew", "latin"],
 });
 
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 }
 
 export const viewport: Viewport = {
-  themeColor: "#0e6b62",
+  themeColor: "#0b1d4d",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -33,7 +33,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   const lang = isLang(raw) ? raw : DEFAULT_LANG;
 
   return (
-    <html lang={lang} dir={dirOf(lang)} className={`${rubik.variable} h-full antialiased`}>
+    <html lang={lang} dir={dirOf(lang)} className={`${heebo.variable} h-full antialiased`}>
       <body className="min-h-full">
         <Providers lang={lang}>
           <AppShell>{children}</AppShell>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useMemo } from "react";
-import { Compass, FlaskConical, Languages, Luggage, MessageCircle, Plus, UserRound } from "lucide-react";
+import { Compass, FlaskConical, Luggage, MessageCircle, Plus, UserRound } from "lucide-react";
 import { useT, useToast } from "./Providers";
 import { DEMO_MAN, DEMO_WOMAN } from "@/lib/seed";
 import { findUser, useApp } from "@/lib/store";
@@ -15,13 +15,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const me = findUser(users, meId);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-sand md:my-4 md:min-h-[calc(100dvh-2rem)] md:rounded-3xl md:shadow-xl md:ring-1 md:ring-line">
-      <DemoStrip gender={me?.gender} />
-      <Header gender={me?.gender} />
-      <main className="flex-1 px-4 pb-32 pt-2">{children}</main>
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip bg-mist md:my-4 md:min-h-[calc(100dvh-2rem)] md:rounded-[32px] md:shadow-2xl md:ring-1 md:ring-black/5">
+      <DemoStrip gender={me?.status === "active" ? me.gender : undefined} />
+      <main className="flex-1 pb-32">{children}</main>
       <Suspense fallback={<BottomNav active={null} />}>
         <LiveBottomNav />
       </Suspense>
+    </div>
+  );
+}
+
+/** pages render inside this: the sample data only exists in the browser, so the server sends placeholders */
+export function Gate({ children, allowPending = false }: { children: React.ReactNode; allowPending?: boolean }) {
+  const ready = useApp((s) => s.ready);
+  const me = useApp((s) => s.users.find((u) => u.id === s.meId));
+  if (!ready || !me) return <Loading />;
+  if (me.status !== "active" && !allowPending) return <NotActive suspended={me.status === "suspended"} />;
+  return children;
+}
+
+/** someone who signed up and isn't approved yet (or was suspended) only gets this */
+function NotActive({ suspended }: { suspended: boolean }) {
+  const { t, href } = useT();
+  return (
+    <div className="flex min-h-[60dvh] flex-col items-center justify-center px-6 text-center">
+      <h1 className="text-2xl font-extrabold text-ink">{suspended ? t.admin.suspended : t.welcome.pendingTitle}</h1>
+      {!suspended && (
+        <Link href={href("/welcome")} className="mt-5 rounded-2xl bg-navy px-6 py-3 font-semibold text-white">
+          {t.welcome.next}
+        </Link>
+      )}
     </div>
   );
 }
@@ -34,13 +57,14 @@ function DemoStrip({ gender }: { gender?: Gender }) {
 
   const pick = (g: Gender) => {
     if (g === gender) return;
+    // go to the trips list first, so the page being left doesn't redraw as the other person
+    router.push(href("/"));
     viewAs(g === "male" ? DEMO_MAN : DEMO_WOMAN);
     toast(t.section[g]);
-    router.push(href("/"));
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 border-b border-dashed border-amber-300 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 md:rounded-t-3xl">
+    <div className="flex items-center justify-between gap-2 border-b border-dashed border-amber-300 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 md:rounded-t-[32px]">
       <span className="flex items-center gap-1.5">
         <FlaskConical size={14} aria-hidden />
         {t.demo.banner}
@@ -67,45 +91,13 @@ function DemoStrip({ gender }: { gender?: Gender }) {
   );
 }
 
-function Header({ gender }: { gender?: Gender }) {
-  const { t, lang, href } = useT();
-  const router = useRouter();
-
-  // read the current path on click, so the header doesn't need to wait for the route's params
-  const switchLang = () => {
-    const other = lang === "he" ? "en" : "he";
-    const rest = window.location.pathname.replace(/^\/(he|en)(?=\/|$)/, "");
-    router.push(`/${other}${rest}${window.location.search}`);
-  };
-
-  return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-sand/90 px-4 py-3 backdrop-blur">
-      <Link href={href("/")} className="flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
-          <Compass size={20} aria-hidden />
-        </span>
-        <span className="leading-tight">
-          <span className="block text-lg font-bold text-ink">{t.appName}</span>
-          {gender && <span className="block text-xs font-medium text-brand">{t.section[gender]}</span>}
-        </span>
-      </Link>
-      <button
-        type="button"
-        onClick={switchLang}
-        className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line hover:bg-cream"
-      >
-        <Languages size={16} aria-hidden />
-        {t.langSwitch}
-      </button>
-    </header>
-  );
-}
-
 type NavKey = "trips" | "my" | "new" | "chats" | "profile";
 
 function LiveBottomNav() {
   const pathname = usePathname();
   const rest = pathname.replace(/^\/(he|en)(?=\/|$)/, "") || "/";
+  // signing up is its own flow, without the app's navigation
+  if (rest.startsWith("/welcome")) return null;
   const active: NavKey | null =
     rest === "/" || rest.startsWith("/trips")
       ? "trips"
@@ -115,7 +107,7 @@ function LiveBottomNav() {
           ? "new"
           : rest.startsWith("/chat")
             ? "chats"
-            : rest.startsWith("/profile")
+            : rest.startsWith("/profile") || rest.startsWith("/admin") || rest.startsWith("/safety")
               ? "profile"
               : null;
   return <BottomNav active={active} />;
@@ -127,41 +119,46 @@ function BottomNav({ active }: { active: NavKey | null }) {
   const trips = useApp((s) => s.trips);
   const requests = useApp((s) => s.requests);
 
-  // requests waiting for my answer, shown as a dot on "My trips"
+  // requests waiting for my answer, shown on "My trips"
   const waiting = useMemo(() => {
     const mine = new Set(trips.filter((tr) => tr.ownerId === meId).map((tr) => tr.id));
     return requests.filter((r) => r.status === "pending" && mine.has(r.tripId)).length;
   }, [trips, requests, meId]);
 
-  const item = (key: NavKey, path: string, Icon: typeof Compass, badge = 0) => (
-    <Link
-      href={href(path)}
-      aria-current={active === key ? "page" : undefined}
-      className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-        active === key ? "text-brand" : "text-muted hover:text-ink"
-      }`}
-    >
-      <Icon size={22} strokeWidth={active === key ? 2.4 : 1.8} aria-hidden />
-      {t.nav[key]}
-      {badge > 0 && (
-        <span className="absolute top-1 start-1/2 ms-2 min-w-4 rounded-full bg-coral px-1 text-center text-[10px] leading-4 text-white">
-          {badge}
+  const item = (key: NavKey, path: string, Icon: typeof Compass, badge = 0) => {
+    const on = active === key;
+    return (
+      <Link
+        href={href(path)}
+        aria-current={on ? "page" : undefined}
+        className={`relative flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] font-semibold transition ${
+          on ? "text-navy" : "text-muted hover:text-ink"
+        }`}
+      >
+        <span className={`flex h-8 w-12 items-center justify-center rounded-full transition ${on ? "bg-sky-soft" : ""}`}>
+          <Icon size={21} strokeWidth={on ? 2.3 : 1.8} aria-hidden />
         </span>
-      )}
-    </Link>
-  );
+        {t.nav[key]}
+        {badge > 0 && (
+          <span className="absolute top-1.5 start-1/2 ms-2.5 min-w-4 rounded-full bg-coral px-1 text-center text-[10px] leading-4 text-white ring-2 ring-white">
+            {badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-line bg-white/95 pb-safe backdrop-blur md:bottom-4 md:rounded-b-3xl">
-      <div className="flex items-end px-2">
+    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md rounded-t-[28px] bg-white/95 pb-safe shadow-[0_-8px_30px_-12px_rgba(11,29,77,0.25)] backdrop-blur md:bottom-4 md:rounded-b-[32px]">
+      <div className="flex items-end px-1">
         {item("trips", "/", Compass)}
         {item("my", "/my", Luggage, waiting)}
         <Link
           href={href("/new")}
           aria-current={active === "new" ? "page" : undefined}
-          className="flex flex-1 flex-col items-center gap-0.5 pb-2 text-[11px] font-medium text-ink"
+          className="flex flex-1 flex-col items-center gap-1 pb-2 text-[11px] font-semibold text-navy"
         >
-          <span className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-brand/30 ring-4 ring-white">
+          <span className="-mt-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-navy-2 to-navy text-white shadow-xl shadow-navy/30 ring-4 ring-white">
             <Plus size={28} aria-hidden />
           </span>
           {t.nav.new}
@@ -173,18 +170,12 @@ function BottomNav({ active }: { active: NavKey | null }) {
   );
 }
 
-/** pages render inside this: the sample data only exists in the browser, so the server sends placeholders */
-export function Gate({ children }: { children: React.ReactNode }) {
-  const ready = useApp((s) => s.ready);
-  const hasMe = useApp((s) => s.users.some((u) => u.id === s.meId));
-  return ready && hasMe ? children : <Loading />;
-}
-
 function Loading() {
   return (
-    <div className="space-y-3 pt-2" aria-busy>
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-40 animate-pulse rounded-2xl bg-white/70" />
+    <div className="space-y-3 p-4" aria-busy>
+      <div className="h-48 animate-pulse rounded-3xl bg-white/70" />
+      {[0, 1].map((i) => (
+        <div key={i} className="h-40 animate-pulse rounded-3xl bg-white/70" />
       ))}
     </div>
   );

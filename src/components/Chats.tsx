@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, Lock, SendHorizontal } from "lucide-react";
+import { Check, Lock, SendHorizontal, ShieldCheck } from "lucide-react";
 import { Avatar } from "./Avatar";
-import { BackLink } from "./TripView";
+import { UserActions } from "./Moderation";
+import { Scene } from "./Scene";
+import { BackButton, Body, Card, Empty, PageHeader } from "./ui";
 import { useT } from "./Providers";
 import { formatDay, formatTime } from "@/lib/dates";
+import { isBlocked } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { JoinRequest, Message, Trip, User } from "@/lib/types";
 
@@ -19,7 +23,7 @@ interface Conversation {
 
 /** a chat exists only for an accepted request, between the trip's owner and the person who asked */
 function useConversations(): Conversation[] {
-  const { users, trips, requests, messages, meId } = useApp();
+  const { users, trips, requests, messages, blocks, meId } = useApp();
   const list: Conversation[] = [];
   for (const request of requests) {
     if (request.status !== "accepted") continue;
@@ -27,7 +31,7 @@ function useConversations(): Conversation[] {
     if (!trip) continue;
     const otherId = trip.ownerId === meId ? request.fromUserId : request.fromUserId === meId ? trip.ownerId : null;
     const other = otherId ? findUser(users, otherId) : undefined;
-    if (!other) continue;
+    if (!other || isBlocked(blocks, meId, other.id)) continue;
     const last = messages.filter((m) => m.requestId === request.id).at(-1);
     list.push({ request, trip, other, last });
   }
@@ -41,41 +45,49 @@ export function ChatList() {
 
   return (
     <div>
-      <h1 className="mb-3 text-2xl font-bold text-ink">{t.chat.title}</h1>
-      {conversations.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line bg-white/60 px-4 py-10 text-center text-sm text-muted">
-          {t.chat.empty}
-        </div>
-      ) : (
-        <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-line">
-          {conversations.map(({ request, trip, other, last }) => {
-            const at = last?.at ?? request.createdAt;
-            return (
-              <li key={request.id} className="border-b border-line last:border-b-0">
-                <Link href={href(`/chat/${request.id}`)} className="flex items-center gap-3 p-3.5 hover:bg-cream">
-                  <Avatar id={other.avatar} size={44} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate font-semibold text-ink">{other.nickname}</span>
-                      <span className="shrink-0 text-xs text-muted">
-                        {at.slice(0, 10) === today ? formatTime(at, lang) : formatDay(at.slice(0, 10), lang)}
+      <PageHeader title={t.chat.title} />
+      <Body>
+        {conversations.length === 0 ? (
+          <Empty text={t.chat.empty} />
+        ) : (
+          <ul className="space-y-2.5">
+            {conversations.map(({ request, trip, other, last }) => {
+              const at = last?.at ?? request.createdAt;
+              return (
+                <li key={request.id}>
+                  <Link href={href(`/chat/${request.id}`)} className="flex items-center gap-3 rounded-3xl bg-white p-3 shadow-[0_6px_20px_-12px_rgba(11,29,77,0.25)] transition hover:shadow-md">
+                    <span className="relative shrink-0">
+                      <span className="block h-14 w-14 overflow-hidden rounded-2xl">
+                        <Scene area={trip.area} className="h-full w-full" />
+                      </span>
+                      <span className="absolute -bottom-1 -end-1 rounded-full ring-2 ring-white">
+                        <Avatar id={other.avatar} size={26} />
                       </span>
                     </span>
-                    <span className="block truncate text-xs font-medium text-brand">{trip.place}</span>
-                    <span className="block truncate text-sm text-muted">{last?.text ?? t.chat.acceptedLine}</span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-bold text-ink">{other.nickname}</span>
+                        <span className="shrink-0 text-xs text-muted">
+                          {at.slice(0, 10) === today ? formatTime(at, lang) : formatDay(at.slice(0, 10), lang)}
+                        </span>
+                      </span>
+                      <span className="block truncate text-xs font-semibold text-sky">{trip.place}</span>
+                      <span className="block truncate text-sm text-muted">{last?.text ?? t.chat.acceptedLine}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Body>
     </div>
   );
 }
 
 export function ChatView({ id }: { id: string }) {
   const { t, lang, href } = useT();
+  const router = useRouter();
   const { messages, meId, sendMessage } = useApp();
   const conversation = useConversations().find((c) => c.request.id === id);
   const [text, setText] = useState("");
@@ -88,18 +100,17 @@ export function ChatView({ id }: { id: string }) {
 
   if (!conversation) {
     return (
-      <div>
-        <BackLink to="/chat" />
-        <div className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-10 text-muted ring-1 ring-line">
+      <div className="p-4">
+        <BackButton to="/chat" onDark={false} />
+        <Card className="mt-4 flex items-center justify-center gap-2 py-10 text-muted">
           <Lock size={16} aria-hidden />
           {t.chat.locked}
-        </div>
+        </Card>
       </div>
     );
   }
 
   const { request, trip, other } = conversation;
-  const requester = request.fromUserId;
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,21 +120,29 @@ export function ChatView({ id }: { id: string }) {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-14rem)] flex-col">
-      <BackLink to="/chat" />
-      <div className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-line">
+    <div className="flex min-h-[calc(100dvh-9rem)] flex-col">
+      <header className="sticky top-0 z-30 flex items-center gap-3 bg-gradient-to-br from-navy to-navy-2 px-4 py-3 text-white shadow-lg">
+        <BackButton to="/chat" />
         <Avatar id={other.avatar} size={40} />
-        <div className="min-w-0">
-          <div className="font-semibold text-ink">{other.nickname}</div>
-          <Link href={href(`/trips/${trip.id}`)} className="block truncate text-xs font-medium text-brand">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold">{other.nickname}</div>
+          <Link href={href(`/trips/${trip.id}`)} className="block truncate text-xs text-white/75 hover:text-white">
             {t.chat.about(trip.place)}
           </Link>
         </div>
-      </div>
+        <UserActions user={other} onBlocked={() => router.push(href("/chat"))} />
+      </header>
 
-      <div className="flex-1 space-y-2 py-4">
-        {request.note && <Bubble mine={requester === meId} text={request.note} time={formatTime(request.createdAt, lang)} />}
-        <p className="flex items-center justify-center gap-1.5 py-1 text-xs text-brand">
+      <div className="flex-1 space-y-2 px-4 py-4">
+        <div className="flex items-center justify-center gap-1.5 rounded-2xl bg-white/70 px-3 py-2 text-xs text-muted">
+          <ShieldCheck size={14} className="text-mint" aria-hidden />
+          {t.chat.safety} ·
+          <Link href={href("/safety")} className="font-semibold text-sky">
+            {t.chat.safetyLink}
+          </Link>
+        </div>
+        {request.note && <Bubble mine={request.fromUserId === meId} text={request.note} time={formatTime(request.createdAt, lang)} />}
+        <p className="flex items-center justify-center gap-1.5 py-1 text-xs font-semibold text-mint">
           <Check size={14} aria-hidden />
           {t.chat.acceptedLine}
         </p>
@@ -133,7 +152,7 @@ export function ChatView({ id }: { id: string }) {
         <div ref={end} />
       </div>
 
-      <form onSubmit={send} className="sticky bottom-20 flex items-center gap-2 rounded-full bg-white p-1.5 shadow-md ring-1 ring-line">
+      <form onSubmit={send} className="sticky bottom-24 mx-4 flex items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_8px_30px_-10px_rgba(11,29,77,0.35)] ring-1 ring-line">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -145,7 +164,7 @@ export function ChatView({ id }: { id: string }) {
           type="submit"
           aria-label={t.chat.send}
           disabled={!text.trim()}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy text-white disabled:opacity-35"
         >
           <SendHorizontal size={18} className="rtl:rotate-180" aria-hidden />
         </button>
@@ -158,12 +177,12 @@ function Bubble({ mine, text, time }: { mine: boolean; text: string; time: strin
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] leading-snug ${
-          mine ? "rounded-ee-md bg-brand text-white" : "rounded-es-md bg-white text-ink ring-1 ring-line"
+        className={`max-w-[80%] rounded-3xl px-4 py-2.5 text-[15px] leading-snug ${
+          mine ? "rounded-ee-lg bg-navy text-white" : "rounded-es-lg bg-white text-ink shadow-sm"
         }`}
       >
         {text}
-        <span className={`mt-0.5 block text-end text-[10px] ${mine ? "text-white/70" : "text-muted"}`}>{time}</span>
+        <span className={`mt-0.5 block text-end text-[10px] ${mine ? "text-white/65" : "text-muted"}`}>{time}</span>
       </div>
     </div>
   );

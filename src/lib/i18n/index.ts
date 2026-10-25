@@ -12,6 +12,3 @@ export const isLang = (value: string): value is Lang => (LANGS as string[]).incl
 export const dictionaries: Record<Lang, Dict> = { he, en };
 
 export const dirOf = (lang: Lang) => (lang === "he" ? "rtl" : "ltr");
-
-/** the placeholder fee for posting a booked trip (not decided yet) */
-export const BOOKED_FEE = "₪49";
