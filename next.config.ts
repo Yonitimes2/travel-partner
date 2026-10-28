@@ -5,9 +5,9 @@ const nextConfig: NextConfig = {
   // the indicator sits on top of the bottom navigation; errors still surface without it
   devIndicators: false,
   partialPrefetching: true,
-  images: {
-    formats: ["image/avif", "image/webp"],
-    qualities: [70, 75],
+  // the destination photos are made ahead of time with a hash in their names: cache them for a year
+  async headers() {
+    return [{ source: "/photos/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }];
   },
   turbopack: {
     rules: {

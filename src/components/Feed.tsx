@@ -1,25 +1,75 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { ChevronDown, Globe2 } from "lucide-react";
 import { LogoMark } from "./Logo";
 import { Photo } from "./Photo";
 import { TripCard } from "./TripBits";
 import { LangToggle, PointsPill, SegTabs } from "./ui";
 import { useT } from "./Providers";
-import { formatMonth, isOpen, monthsOf } from "@/lib/dates";
-import { PHOTOS, photosOf } from "@/lib/photos";
+import { formatMonth, isOpen, monthsOf, todayISO } from "@/lib/dates";
+import { FULL_WIDTH, PHOTOS, heroOfDay, photosOf } from "@/lib/photos";
 import { canSee } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { Area, PhotoId, TripKind, Wanted } from "@/lib/types";
 
 export const AREAS: Area[] = ["north", "center", "jerusalem", "south", "europe", "usa", "asia", "other"];
 const WANTED: Wanted[] = ["one", "few", "families"];
-const HERO_PHOTOS: PhotoId[] = ["europe-carezza", "asia-halong", "center-caesarea", "south-ramon", "europe-seceda"];
+const noSubscribe = () => () => {};
+const currentHour = () => new Date().getHours();
+
+/**
+ * The top of the home screen: today's destination photo, the greeting and the headline. It doesn't wait
+ * for the data (the greeting fills in when it comes), and the photo is already downloading: the page's
+ * <head> asked for it.
+ */
+export function HomeHero() {
+  const { t, href } = useT();
+  const { users, meId, feed } = useApp();
+  const me = findUser(users, meId);
+  // the day comes from the browser's clock, so the server leaves the photo out and the browser adds it at once
+  const today = useSyncExternalStore(noSubscribe, todayISO, () => "");
+  // so does the hour; the greeting only shows once the person is known, which is in the browser too
+  const hour = useSyncExternalStore(noSubscribe, currentHour, () => 12);
+  const greeting = hour < 12 ? t.greeting.morning : hour < 17 ? t.greeting.noon : t.greeting.evening;
+  // the chosen area's photo, or one of the brightest destinations, a different one each day
+  const heroPhoto: PhotoId | null = feed.area ? photosOf(feed.area)[0] : today ? heroOfDay(today) : null;
+
+  return (
+    <section className="relative h-[290px] overflow-hidden bg-navy text-white">
+      {heroPhoto && <Photo area={PHOTOS[heroPhoto].area} photo={heroPhoto} sizes={FULL_WIDTH} preload />}
+      <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-transparent to-navy/80" />
+      <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <Link href={href("/")} className="flex items-center gap-2">
+            {/* the solid app icon, since the photo behind it changes daily and can be bright */}
+            <LogoMark size={36} tile className="shadow-lg shadow-navy/30" />
+            <span className="text-lg font-bold tracking-tight">{t.appName}</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            {me && (
+              <Link href={href("/profile")}>
+                <PointsPill points={me.stats.points} onDark />
+              </Link>
+            )}
+            <LangToggle />
+          </div>
+        </div>
+        <div className="mt-auto">
+          <p className="h-5 text-sm font-medium opacity-85">{me && greeting(me.nickname)}</p>
+          <h1 className="mt-1 text-[32px] font-extrabold leading-[1.1] tracking-tight">{t.home.headline}</h1>
+          <span className={`glass mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${me ? "" : "invisible"}`}>
+            {me ? t.section[me.gender] : "·"}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Feed() {
-  const { t, lang, href } = useT();
+  const { t, lang } = useT();
   const { users, trips, blocks, meId, today, feed, setFeed } = useApp();
   const me = findUser(users, meId)!;
 
@@ -48,39 +98,8 @@ export function Feed() {
   // points are counted by the server, from everyone's requests (the app only sees its own)
   const pointsOf = (userId: string) => findUser(users, userId)?.stats.points ?? 0;
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? t.greeting.morning : hour < 17 ? t.greeting.noon : t.greeting.evening;
-  // the hero: the chosen area's photo, or one of the brightest destinations, a different one each day
-  const heroPhoto: PhotoId = feed.area ? photosOf(feed.area)[0] : HERO_PHOTOS[Number(today.replaceAll("-", "")) % HERO_PHOTOS.length];
-
   return (
     <div>
-      {/* the hero: destination art under navy, like an airline home screen */}
-      <section className="relative h-[290px] overflow-hidden text-white">
-        <Photo area={PHOTOS[heroPhoto].area} photo={heroPhoto} sizes="(max-width: 448px) 100vw, 448px" preload />
-        <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-transparent to-navy/80" />
-        <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
-          <div className="flex items-center justify-between gap-2">
-            <Link href={href("/")} className="flex items-center gap-2">
-              {/* the solid app icon, since the photo behind it changes daily and can be bright */}
-              <LogoMark size={36} tile className="shadow-lg shadow-navy/30" />
-              <span className="text-lg font-bold tracking-tight">{t.appName}</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Link href={href("/profile")}>
-                <PointsPill points={pointsOf(meId)} onDark />
-              </Link>
-              <LangToggle />
-            </div>
-          </div>
-          <div className="mt-auto">
-            <p className="text-sm font-medium opacity-85">{greeting(me.nickname)}</p>
-            <h1 className="mt-1 text-[32px] font-extrabold leading-[1.1] tracking-tight">{t.home.headline}</h1>
-            <span className="glass mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold">{t.section[me.gender]}</span>
-          </div>
-        </div>
-      </section>
-
       <div className="relative -mt-6 rounded-t-[28px] bg-mist px-4 pt-5">
         <SegTabs
           value={feed.kind}

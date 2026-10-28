@@ -42,3 +42,6 @@ next-env.d.ts
 
 # server keys and the dev email outbox
 /.tp-data/
+
+# destination photo sizes, made by npm run photos before each build
+/public/photos/

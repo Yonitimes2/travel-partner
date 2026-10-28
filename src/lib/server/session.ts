@@ -8,7 +8,9 @@ import { serverKey } from "./keys";
  * - the sign-up ticket: an email that was just verified by a code but has no account yet
  */
 
-export const SESSION_COOKIE = "tp_auth";
+import { SESSION_COOKIE } from "../auth-cookie";
+
+export { SESSION_COOKIE };
 export const SIGNUP_COOKIE = "tp_signup";
 const SESSION_DAYS = 60;
 const SIGNUP_MINUTES = 60;

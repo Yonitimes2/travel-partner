@@ -9,6 +9,7 @@ import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profil
 import { Photo } from "./Photo";
 import { Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT } from "./Providers";
+import { FULL_WIDTH } from "@/lib/photos";
 import { phoneDigits } from "@/lib/rules";
 import { findUser, useApp } from "@/lib/store";
 import type { AgeGroup, AvatarId, Gender, Observance, Pace, Party } from "@/lib/types";
@@ -124,9 +125,8 @@ export function Welcome() {
     }
   };
 
-  if (!ready) return <div className="min-h-[calc(100dvh-2rem)] animate-pulse bg-navy/90" aria-busy />;
-
-  if (me?.status === "pending") {
+  // the first screen shows at once; someone already signed in moves on as soon as the server answers
+  if (ready && me?.status === "pending") {
     return (
       <div className="flex min-h-[calc(100dvh-2rem)] flex-col items-center justify-center px-6 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-soft text-sky">
@@ -143,7 +143,7 @@ export function Welcome() {
   if (step === 0) {
     return (
       <div className="relative min-h-[calc(100dvh-2rem)] overflow-hidden text-white">
-        <Photo area="jerusalem" photo="jerusalem-citadel-view" sizes="(max-width: 448px) 100vw, 448px" preload />
+        <Photo area="jerusalem" photo="jerusalem-citadel-view" sizes={FULL_WIDTH} preload />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-navy/25 to-navy" />
         <div className="relative flex min-h-[calc(100dvh-2rem)] flex-col px-6 pb-10 pt-5">
           <div className="flex items-center justify-between">

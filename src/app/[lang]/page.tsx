@@ -1,10 +1,14 @@
 import { Gate } from "@/components/AppShell";
-import { Feed } from "@/components/Feed";
+import { Feed, HomeHero } from "@/components/Feed";
 
 export default function TripsPage() {
   return (
-    <Gate>
-      <Feed />
-    </Gate>
+    <>
+      {/* the photo and headline come first, without waiting for the trips */}
+      <HomeHero />
+      <Gate>
+        <Feed />
+      </Gate>
+    </>
   );
 }
