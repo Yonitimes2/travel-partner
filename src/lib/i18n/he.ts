@@ -35,6 +35,8 @@ const duration = (days: number) => {
 /** Hebrew is the source dictionary: English must have the same shape (see en.ts) */
 export const he = {
   appName: "שותף לדרך",
+  /** under the name, next to his face */
+  host: "עם בני וקסלר",
 
   duration,
   /** for the big countdown: the number, and the words that go under it ("חודשים ושבוע") */

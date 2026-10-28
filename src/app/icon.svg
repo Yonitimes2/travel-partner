@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><linearGradient id="ig" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14307a"/><stop offset="1" stop-color="#0b1d4d"/></linearGradient>
-<clipPath id="it"><rect width="120" height="51.22"/></clipPath>
-<clipPath id="ib"><rect y="51.22" width="120" height="120"/></clipPath>
-<mask id="il"><rect width="120" height="120" fill="#fff"/><path d="M77 91.78L58.06 64.27A23 23 0 1 1 95.94 64.27Z" fill="none" stroke="#000" stroke-width="14.0" stroke-linejoin="round" clip-path="url(#ib)"/></mask>
-<mask id="ir"><rect width="120" height="120" fill="#fff"/><path d="M43 91.78L24.06 64.27A23 23 0 1 1 61.94 64.27Z" fill="none" stroke="#000" stroke-width="14.0" stroke-linejoin="round" clip-path="url(#it)"/></mask>
-</defs><rect width="120" height="120" rx="27" fill="url(#ig)"/><g fill="none" stroke-width="9" stroke-linejoin="round"><path d="M43 91.78L24.06 64.27A23 23 0 1 1 61.94 64.27Z" stroke="#fff" mask="url(#il)"/><path d="M77 91.78L58.06 64.27A23 23 0 1 1 95.94 64.27Z" stroke="#e9c46a" mask="url(#ir)"/></g>
-<circle cx="43.0" cy="51.22" r="5" fill="#fff"/><circle cx="77.0" cy="51.22" r="5" fill="#e9c46a"/></svg>

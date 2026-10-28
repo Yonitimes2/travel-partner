@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
 import { ChevronDown, Globe2 } from "lucide-react";
-import { LogoMark } from "./Logo";
+import { Brand } from "./Logo";
 import { Photo } from "./Photo";
 import { TripCard } from "./TripBits";
 import { LangToggle, PointsPill, SegTabs } from "./ui";
@@ -42,10 +42,8 @@ export function HomeHero() {
       <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-transparent to-navy/80" />
       <div className="relative flex h-full flex-col px-4 pb-10 pt-4">
         <div className="flex items-center justify-between gap-2">
-          <Link href={href("/")} className="flex items-center gap-2">
-            {/* the solid app icon, since the photo behind it changes daily and can be bright */}
-            <LogoMark size={36} tile className="shadow-lg shadow-navy/30" />
-            <span className="text-lg font-bold tracking-tight">{t.appName}</span>
+          <Link href={href("/")}>
+            <Brand />
           </Link>
           <div className="flex items-center gap-2">
             {me && (

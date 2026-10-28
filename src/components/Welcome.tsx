@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Hourglass, Mail, ShieldCheck } from "lucide-react";
-import { LogoMark } from "./Logo";
+import { Brand } from "./Logo";
 import { PartyPicker } from "./PartyPicker";
 import { AGE_GROUPS, AvatarPicker, ChoiceRow, OBSERVANCE, PACES } from "./Profile";
 import { Photo } from "./Photo";
@@ -147,7 +147,7 @@ export function Welcome() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-navy/25 to-navy" />
         <div className="relative flex min-h-[calc(100dvh-2rem)] flex-col px-6 pb-10 pt-5">
           <div className="flex items-center justify-between">
-            <LogoMark size={44} tile className="shadow-lg shadow-navy/30" />
+            <Brand size={48} />
             <LangToggle />
           </div>
           <div className="mt-auto">
