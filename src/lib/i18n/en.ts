@@ -12,7 +12,7 @@ const duration = (days: number) =>
 
 export const en: Dict = {
   appName: "Travel Partner",
-  host: "with Benny Waxler",
+  by: "by",
 
   duration,
   countdown: (days) => {

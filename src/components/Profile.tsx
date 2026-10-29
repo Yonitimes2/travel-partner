@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, Compass, LogOut, Lock, Mail, ShieldCheck, Star, Users } from "lucide-react";
 import { AVATAR_IDS, Avatar } from "./Avatar";
-import { Logo } from "./Logo";
+import { LogoMark } from "./Logo";
 import { PartyPicker } from "./PartyPicker";
 import { Body, Card, Chip, Field, LangToggle, inputClass, primaryButton } from "./ui";
 import { useT, useToast } from "./Providers";
@@ -34,7 +34,7 @@ function MemberCard({ me }: { me: User }) {
       <div aria-hidden className="absolute -bottom-16 start-10 h-40 w-40 rounded-full bg-sky/20 blur-2xl" />
       <div className="relative flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-sm font-semibold">
-          <Logo size={24} className="ring-1 ring-white/50" />
+          <LogoMark size={28} />
           <span className="opacity-90">{t.appName}</span>
         </span>
         <span className="rounded-full bg-gold-soft px-3 py-1 text-xs font-extrabold text-gold">{t.tier[tier]}</span>

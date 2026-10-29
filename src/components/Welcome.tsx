@@ -147,7 +147,7 @@ export function Welcome() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy/50 via-navy/25 to-navy" />
         <div className="relative flex min-h-[calc(100dvh-2rem)] flex-col px-6 pb-10 pt-5">
           <div className="flex items-center justify-between">
-            <Brand size={48} />
+            <Brand size={44} />
             <LangToggle />
           </div>
           <div className="mt-auto">
